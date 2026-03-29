@@ -42,3 +42,6 @@ coverage/
 # Misc (template GitHub)
 .turbo
 .vercel
+
+# Este repo usa solo npm; no commitear lock de pnpm
+pnpm-lock.yaml
