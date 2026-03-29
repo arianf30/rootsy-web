@@ -64,9 +64,9 @@ export function LandingPage() {
   return (
     <div
       ref={containerRef}
-      className="relative min-h-screen overflow-x-hidden bg-[#070a09] text-foreground"
+      className="relative min-h-screen overflow-x-hidden bg-background text-foreground"
     >
-      {/* Fondo atmosférico (misma familia que /menu) */}
+      {/* Fondo atmosférico — tokens del shell (app/[pop]/menu) */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div
           className="absolute h-[820px] w-[820px] rounded-full opacity-[0.12] blur-[150px] transition-all duration-[2000ms] ease-out"
@@ -95,7 +95,7 @@ export function LandingPage() {
               height: particle.height + "px",
               left: particle.left + "%",
               top: particle.top + "%",
-              background: "#34d399",
+              background: "var(--rootsy-particle)",
               opacity: particle.opacity,
               animationDuration: particle.duration + "s",
               animationDelay: particle.delay + "s",
@@ -105,20 +105,20 @@ export function LandingPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(7,10,9,0.75)_100%)]" />
         {/* “Dosel” superior sutil */}
         <div
-          className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#070a09] via-transparent to-transparent"
+          className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-background via-transparent to-transparent"
           aria-hidden
         />
       </div>
 
       {/* Barra superior */}
-      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0c0f0e]/95 backdrop-blur-2xl">
+      <header className="sticky top-0 z-50 border-b border-rootsy-hairline bg-card/95 backdrop-blur-2xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <Link
             href="/"
-            className="flex items-center gap-2 font-bold tracking-tight text-white transition-opacity hover:opacity-90"
+            className="flex items-center gap-2 font-bold tracking-tight text-foreground transition-opacity hover:opacity-90"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.06] ring-1 ring-white/[0.08]">
-              <Leaf className="h-5 w-5 text-emerald-400" aria-hidden />
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted ring-1 ring-border">
+              <Leaf className="h-5 w-5 text-meadow" aria-hidden />
             </span>
             <span className="text-lg">Rootsy</span>
           </Link>
@@ -128,7 +128,7 @@ export function LandingPage() {
               <a
                 key={item.href}
                 href={item.href}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-white/65 transition-colors hover:bg-white/[0.05] hover:text-white"
+                className="rounded-lg px-3 py-2 text-sm font-medium text-foreground/65 transition-colors hover:bg-muted hover:text-foreground"
               >
                 {item.label}
               </a>
@@ -139,7 +139,7 @@ export function LandingPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="hidden text-white/80 hover:bg-white/10 hover:text-white sm:inline-flex"
+              className="hidden text-foreground/80 hover:bg-muted hover:text-foreground sm:inline-flex"
               asChild
             >
               <Link href={LOGIN_URL}>Ingresar</Link>
@@ -153,7 +153,7 @@ export function LandingPage() {
             </Button>
             <button
               type="button"
-              className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-2 text-white md:hidden"
+              className="rounded-xl border border-border bg-secondary p-2 text-foreground md:hidden"
               aria-expanded={navOpen}
               aria-label={navOpen ? "Cerrar menú" : "Abrir menú"}
               onClick={() => setNavOpen((o) => !o)}
@@ -164,13 +164,13 @@ export function LandingPage() {
         </div>
 
         {navOpen ? (
-          <div className="border-t border-white/[0.06] bg-[#0c0f0e]/98 px-4 py-4 md:hidden">
+          <div className="border-t border-rootsy-hairline bg-card/98 px-4 py-4 md:hidden">
             <nav className="flex flex-col gap-1" aria-label="Móvil">
               {NAV.map((item) => (
                 <a
                   key={item.href}
                   href={item.href}
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/80 hover:bg-white/[0.06]"
+                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-foreground/80 hover:bg-muted"
                   onClick={() => setNavOpen(false)}
                 >
                   {item.label}
@@ -178,7 +178,7 @@ export function LandingPage() {
               ))}
               <Link
                 href={LOGIN_URL}
-                className="mt-2 rounded-lg px-3 py-2.5 text-sm font-medium text-emerald-400 hover:bg-white/[0.06]"
+                className="mt-2 rounded-lg px-3 py-2.5 text-sm font-medium text-meadow hover:bg-muted"
                 onClick={() => setNavOpen(false)}
               >
                 Ingresar
@@ -203,16 +203,16 @@ export function LandingPage() {
         >
           <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-center lg:gap-10">
             <div className="flex flex-col gap-6">
-              <p className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-300/95">
+              <p className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-meadow">
                 Gestión que crece con vos
               </p>
-              <h1 className="text-balance text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-[3.25rem] lg:leading-[1.1]">
+              <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-[3.25rem] lg:leading-[1.1]">
                 Un solo sistema.{" "}
-                <span className="bg-gradient-to-r from-emerald-300 to-teal-200 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-meadow to-teal-200 bg-clip-text text-transparent">
                   Cualquier negocio.
                 </span>
               </h1>
-              <p className="max-w-xl text-pretty text-lg text-white/65 sm:text-xl">
+              <p className="max-w-xl text-pretty text-lg text-foreground/65 sm:text-xl">
                 Rootsy se adapta a cómo vendés, comprás y administrás: un mundo
                 ordenado bajo el mismo árbol — simple en la superficie, profundo
                 cuando lo necesitás.
@@ -228,13 +228,13 @@ export function LandingPage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="h-12 rounded-xl border-white/20 bg-white/[0.04] text-white hover:bg-white/[0.08]"
+                  className="h-12 rounded-xl border-border bg-secondary text-foreground hover:bg-muted"
                   asChild
                 >
                   <Link href={LOGIN_URL}>Ingresar</Link>
                 </Button>
               </div>
-              <p className="text-sm text-white/40">
+              <p className="text-sm text-muted-foreground">
                 Sin tarjeta para explorar · Migrá cuando quieras
               </p>
             </div>
@@ -242,7 +242,7 @@ export function LandingPage() {
             <div className="relative mx-auto flex max-w-md justify-center lg:mx-0 lg:max-w-none lg:justify-end">
               <div className="relative aspect-square w-full max-w-[420px]">
                 <div className="absolute inset-6 rounded-[2rem] bg-gradient-to-br from-emerald-500/20 via-teal-500/10 to-transparent blur-2xl" />
-                <div className="absolute inset-0 rounded-[2rem] ring-1 ring-white/[0.08]" />
+                <div className="absolute inset-0 rounded-[2rem] ring-1 ring-border" />
                 <Image
                   src="/rootsy-mascot.png"
                   alt="Rootsy, la guía de tu negocio"
@@ -259,11 +259,11 @@ export function LandingPage() {
         {/* Anclas vacías: las completamos en siguientes iteraciones */}
         <section
           id="soluciones"
-          className="relative z-10 scroll-mt-24 border-t border-white/[0.06] bg-[#080c0b]/80 py-20"
+          className="relative z-10 scroll-mt-24 border-t border-rootsy-hairline bg-rootsy-section-alt py-20"
         >
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl font-bold text-white">Soluciones</h2>
-            <p className="mt-2 max-w-2xl text-white/55">
+            <h2 className="text-2xl font-bold text-foreground">Soluciones</h2>
+            <p className="mt-2 max-w-2xl text-foreground/55">
               Próximamente: cómo Rootsy encaja en tu operación.
             </p>
           </div>
@@ -274,8 +274,8 @@ export function LandingPage() {
           className="relative z-10 scroll-mt-24 py-20"
         >
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl font-bold text-white">Clientes</h2>
-            <p className="mt-2 max-w-2xl text-white/55">
+            <h2 className="text-2xl font-bold text-foreground">Clientes</h2>
+            <p className="mt-2 max-w-2xl text-foreground/55">
               Próximamente: historias y sectores.
             </p>
           </div>
@@ -283,11 +283,11 @@ export function LandingPage() {
 
         <section
           id="faq"
-          className="relative z-10 scroll-mt-24 border-t border-white/[0.06] bg-[#080c0b]/80 py-20"
+          className="relative z-10 scroll-mt-24 border-t border-rootsy-hairline bg-rootsy-section-alt py-20"
         >
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl font-bold text-white">Preguntas frecuentes</h2>
-            <p className="mt-2 max-w-2xl text-white/55">
+            <h2 className="text-2xl font-bold text-foreground">Preguntas frecuentes</h2>
+            <p className="mt-2 max-w-2xl text-foreground/55">
               Próximamente: respuestas claras, sin humo.
             </p>
           </div>
@@ -298,18 +298,18 @@ export function LandingPage() {
           className="relative z-10 scroll-mt-24 py-24 pb-32"
         >
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl font-bold text-white">Precios</h2>
-            <p className="mt-2 max-w-2xl text-white/55">
+            <h2 className="text-2xl font-bold text-foreground">Precios</h2>
+            <p className="mt-2 max-w-2xl text-foreground/55">
               Próximamente: planes y el salto que mencionamos arriba.
             </p>
           </div>
         </section>
       </main>
 
-      <footer className="relative z-10 border-t border-white/[0.06] bg-[#050807]/90 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-center text-sm text-white/45 sm:flex-row sm:text-left sm:px-6 lg:px-8">
+      <footer className="relative z-10 border-t border-rootsy-hairline bg-rootsy-footer py-10">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-center text-sm text-foreground/45 sm:flex-row sm:text-left sm:px-6 lg:px-8">
           <span>© {new Date().getFullYear()} Rootsy</span>
-          <span className="text-white/35">El mundo dentro de tu negocio</span>
+          <span className="text-foreground/35">El mundo dentro de tu negocio</span>
         </div>
       </footer>
     </div>

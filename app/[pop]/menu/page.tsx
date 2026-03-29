@@ -191,13 +191,12 @@ export default function MenuPage() {
   }
 
   return (
-    <div ref={containerRef} className="fixed inset-0 flex flex-col overflow-hidden bg-[#070a09]">
-      {/* Background Effects */}
+    <div ref={containerRef} className="fixed inset-0 flex flex-col overflow-hidden bg-background">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
           className="absolute w-[800px] h-[800px] rounded-full opacity-10 blur-[150px] transition-all duration-[2000ms] ease-out"
           style={{
-            background: 'radial-gradient(circle, rgba(52, 211, 153, 0.5) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, color-mix(in srgb, var(--rootsy-particle) 50%, transparent) 0%, transparent 70%)',
             left: `${mousePos.x}%`,
             top: `${mousePos.y}%`,
             transform: 'translate(-50%, -50%)'
@@ -213,7 +212,7 @@ export default function MenuPage() {
               height: particle.height + 'px',
               left: particle.left + '%',
               top: particle.top + '%',
-              background: '#34d399',
+              background: 'var(--rootsy-particle)',
               opacity: particle.opacity,
               animationDuration: particle.duration + 's',
               animationDelay: particle.delay + 's',
@@ -223,22 +222,21 @@ export default function MenuPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(7,10,9,0.7)_100%)]" />
       </div>
 
-      {/* Header */}
-      <header className="relative z-20 bg-[#0c0f0e]/98 backdrop-blur-2xl border-b border-white/[0.04]">
+      <header className="relative z-20 border-b border-rootsy-hairline bg-card/98 backdrop-blur-2xl">
         <div className="flex items-center justify-between px-8 py-5">
           {/* Left */}
           <div className="flex items-center gap-6">
             <Link
               href="/"
-              className="group flex items-center justify-center w-12 h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-white/[0.12] transition-all active:scale-95"
+              className="group flex items-center justify-center w-12 h-12 rounded-xl border border-foreground/[0.06] bg-secondary transition-all hover:border-foreground/[0.12] hover:bg-muted active:scale-95"
             >
-              <Home className="h-5 w-5 text-white/50 group-hover:text-white/80 transition-colors" />
+              <Home className="h-5 w-5 text-foreground/50 transition-colors group-hover:text-foreground/80" />
             </Link>
 
-            <div className="h-6 w-px bg-white/[0.06]" />
+            <div className="h-6 w-px bg-border" />
 
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl overflow-hidden ring-1 ring-white/[0.08]">
+              <div className="w-14 h-14 overflow-hidden rounded-2xl ring-1 ring-border">
                 <img
                   src="https://api.dicebear.com/7.x/shapes/svg?seed=store1&backgroundColor=1a1f1d"
                   alt="Logo sucursal"
@@ -246,8 +244,8 @@ export default function MenuPage() {
                 />
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="font-bold text-white text-base tracking-tight">Sucursal Centro</span>
-                <span className="text-sm text-white/40 flex items-center gap-1.5">
+                <span className="text-base font-bold tracking-tight text-foreground">Sucursal Centro</span>
+                <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5" />
                   Av. Principal 1234, Buenos Aires
                 </span>
@@ -259,18 +257,18 @@ export default function MenuPage() {
           <div className="flex-1 flex justify-center max-w-[280px] mx-8">
             {showSearch ? (
               <div className="relative w-full animate-in zoom-in-95 duration-200">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/30" />
                 <input
                   type="text"
                   placeholder="Buscar..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   autoFocus
-                  className="w-full h-10 pl-11 pr-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/20 focus:bg-white/[0.06] transition-all"
+                  className="h-10 w-full rounded-xl border border-border bg-secondary py-0 pl-11 pr-10 text-sm text-foreground transition-all placeholder:text-foreground/30 focus:border-foreground/20 focus:bg-muted focus:outline-none"
                 />
                 <button
                   onClick={() => { setShowSearch(false); setSearchQuery("") }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/30 transition-colors hover:text-foreground/60"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -278,11 +276,11 @@ export default function MenuPage() {
             ) : (
               <button
                 onClick={() => setShowSearch(true)}
-                className="flex items-center gap-3 w-full px-4 h-10 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all group"
+                className="group flex h-10 w-full items-center gap-3 rounded-xl border border-foreground/[0.06] bg-secondary px-4 transition-all hover:border-foreground/10 hover:bg-muted"
               >
-                <Search className="h-4 w-4 text-white/30 group-hover:text-white/50" />
-                <span className="text-sm text-white/30 flex-1 text-left">Buscar...</span>
-                <kbd className="px-2 py-0.5 rounded-md bg-white/[0.04] text-[10px] text-white/25 font-mono">⌘K</kbd>
+                <Search className="h-4 w-4 text-foreground/30 group-hover:text-foreground/50" />
+                <span className="flex-1 text-left text-sm text-foreground/30">Buscar...</span>
+                <kbd className="rounded-md bg-secondary px-2 py-0.5 font-mono text-[10px] text-foreground/25">⌘K</kbd>
               </button>
             )}
           </div>
@@ -290,40 +288,40 @@ export default function MenuPage() {
           {/* Right */}
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-1">
-              <button className="flex items-center justify-center w-10 h-10 rounded-xl hover:bg-white/[0.04] transition-all group">
-                <Bell className="h-5 w-5 text-white/40 group-hover:text-white/70 transition-colors" />
+              <button className="group flex h-10 w-10 items-center justify-center rounded-xl transition-all hover:bg-muted">
+                <Bell className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground/70" />
               </button>
-              <button className="flex items-center justify-center w-10 h-10 rounded-xl hover:bg-white/[0.04] transition-all group">
-                <Settings className="h-5 w-5 text-white/40 group-hover:text-white/70 transition-colors" />
+              <button className="group flex h-10 w-10 items-center justify-center rounded-xl transition-all hover:bg-muted">
+                <Settings className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground/70" />
               </button>
             </div>
 
-            <div className="h-6 w-px bg-white/[0.06]" />
+            <div className="h-6 w-px bg-border" />
 
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-11 h-11 rounded-xl overflow-hidden ring-1 ring-white/[0.08]">
+                <div className="h-11 w-11 overflow-hidden rounded-xl ring-1 ring-border">
                   <img
                     src="https://api.dicebear.com/7.x/avataaars/svg?seed=Maria"
                     alt="Avatar"
-                    className="w-full h-full object-cover bg-white/[0.04]"
+                    className="size-full bg-secondary object-cover"
                   />
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#0c0f0e]" />
+                <div className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-card bg-primary" />
               </div>
               <div className="flex flex-col">
-                <span className="font-semibold text-white text-sm">María García</span>
-                <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">Admin</span>
+                <span className="text-sm font-semibold text-foreground">María García</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-meadow">Admin</span>
               </div>
             </div>
 
-            <div className="h-6 w-px bg-white/[0.06]" />
+            <div className="h-6 w-px bg-border" />
 
             <div className="flex flex-col items-end">
-              <span className="text-lg font-bold text-white tabular-nums">
+              <span className="text-lg font-bold tabular-nums text-foreground">
                 {isMounted && time ? time.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
               </span>
-              <span className="text-xs text-white/30 uppercase tracking-wide">
+              <span className="text-xs uppercase tracking-wide text-foreground/30">
                 {isMounted && time ? time.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }) : '---'}
               </span>
             </div>
@@ -335,8 +333,8 @@ export default function MenuPage() {
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center pb-28 pt-4">
         <div className="flex flex-col items-center w-full">
           {/* Section Tabs */}
-          <div className="w-48 flex items-center justify-between px-4 py-2.5 rounded-xl bg-white/[0.06] backdrop-blur-xl border border-white/[0.08] mb-4">
-            <span className="text-sm font-bold text-white tracking-wide">
+          <div className="mb-4 flex w-48 items-center justify-between rounded-xl border border-border bg-muted px-4 py-2.5 backdrop-blur-xl">
+            <span className="text-sm font-bold tracking-wide text-foreground">
               {currentSection.title}
             </span>
             <div className="flex items-center gap-1.5">
@@ -345,8 +343,8 @@ export default function MenuPage() {
                   key={sectionKey}
                   onClick={() => scrollTo(index)}
                   className={`rounded-full transition-all duration-300 ${selectedIndex === index
-                    ? 'w-2 h-2 bg-emerald-500'
-                    : 'w-1.5 h-1.5 bg-white/25 hover:bg-white/50'
+                    ? 'size-2 bg-primary'
+                    : 'size-1.5 bg-foreground/25 hover:bg-foreground/50'
                     }`}
                   aria-label={menuSections[sectionKey].title}
                 />
@@ -390,7 +388,7 @@ export default function MenuPage() {
                               )}
                             </div>
 
-                            <span className="text-xs font-medium text-white/70 group-hover:text-white transition-colors text-center leading-tight drop-shadow-sm">
+                            <span className="text-center text-xs font-medium leading-tight text-foreground/70 drop-shadow-sm transition-colors group-hover:text-foreground">
                               {item.name}
                             </span>
                           </button>
@@ -407,7 +405,7 @@ export default function MenuPage() {
 
       {/* Dock */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
-        <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-white/[0.06] backdrop-blur-2xl border border-white/[0.08]">
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted px-4 py-2.5 backdrop-blur-2xl">
           {dockItems.map((item) => {
             const Icon = item.icon
             return (
@@ -415,7 +413,7 @@ export default function MenuPage() {
                 key={item.name}
                 className="group relative flex flex-col items-center gap-1 transition-all duration-200 hover:scale-110 hover:-translate-y-1 active:scale-95"
               >
-                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-8 h-2 bg-emerald-500/30 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute -bottom-2 left-1/2 h-2 w-8 -translate-x-1/2 rounded-full bg-primary/30 opacity-0 blur-md transition-opacity group-hover:opacity-100" />
 
                 <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/80 to-teal-600/80 flex items-center justify-center group-hover:from-emerald-500 group-hover:to-teal-600 transition-all overflow-hidden shadow-md group-hover:shadow-emerald-500/30">
                   <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 translate-x-[-100%] group-hover:translate-x-[100%] transition-all duration-500" />
@@ -423,7 +421,7 @@ export default function MenuPage() {
                   <Icon className="relative h-6 w-6 text-white drop-shadow-sm" />
                 </div>
 
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded-md bg-black/80 backdrop-blur-sm text-[10px] text-white font-medium opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100 transition-all pointer-events-none whitespace-nowrap">
+                <div className="pointer-events-none absolute -top-8 left-1/2 z-10 scale-90 whitespace-nowrap rounded-md bg-black/80 px-2 py-1 text-[10px] font-medium text-white opacity-0 backdrop-blur-sm transition-all group-hover:scale-100 group-hover:opacity-100">
                   {item.name}
                 </div>
               </button>
@@ -433,8 +431,8 @@ export default function MenuPage() {
       </div>
 
       {/* Help Button */}
-      <button className="absolute bottom-4 right-4 z-20 group flex items-center justify-center w-12 h-12 rounded-full bg-white/[0.06] backdrop-blur-xl border border-white/[0.08] hover:bg-white/[0.1] transition-all active:scale-95">
-        <HelpCircle className="h-5 w-5 text-white/40 group-hover:text-white/70 transition-colors" />
+      <button className="group absolute bottom-4 right-4 z-20 flex size-12 items-center justify-center rounded-full border border-border bg-muted backdrop-blur-xl transition-all hover:bg-muted/80 active:scale-95">
+        <HelpCircle className="size-5 text-muted-foreground transition-colors group-hover:text-foreground/70" />
       </button>
     </div>
   )
