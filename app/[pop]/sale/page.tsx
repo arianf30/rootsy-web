@@ -586,10 +586,23 @@ export default function SalePage() {
     await document.documentElement.requestFullscreen()
   }
 
-  const toolboxBtnIdle =
-    "inline-flex h-full min-h-0 w-full flex-row items-center justify-center gap-2 rounded-none border-0 bg-transparent px-2 py-1 text-foreground/75 shadow-none transition-colors duration-200 hover:bg-muted/45 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-  const toolboxBtnActivo =
-    "relative text-foreground hover:text-foreground [&_svg]:text-emerald-300/95 after:pointer-events-none after:absolute after:inset-x-2 after:bottom-0 after:z-10 after:h-[3px] after:rounded-full after:bg-linear-to-r after:from-transparent after:via-primary after:to-transparent after:shadow-[0_0_14px_rgba(16,185,129,0.55),0_0_28px_rgba(52,211,153,0.25),0_1px_0_rgba(255,255,255,0.35)_inset] after:content-['']"
+  const toolboxBarClass =
+    "border-t border-white/10 bg-[#0b100e]/92 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:p-2.5"
+  const toolboxSlotClass = (configurado: boolean) =>
+    cn(
+      "group flex h-full min-h-[4.5rem] w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition-[background-color,border-color,box-shadow] duration-150 sm:min-h-[4.75rem] sm:gap-3 sm:px-3",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b100e]",
+      configurado
+        ? "border-emerald-500/30 bg-emerald-500/[0.09] shadow-[inset_0_1px_0_rgba(167,243,208,0.08)] hover:border-emerald-400/35 hover:bg-emerald-500/12"
+        : "border-white/[0.06] bg-white/[0.02] hover:border-white/12 hover:bg-white/[0.05]",
+    )
+  const toolboxIconWrap = (configurado: boolean) =>
+    cn(
+      "flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-150 sm:size-10",
+      configurado
+        ? "bg-emerald-500/20 text-emerald-200"
+        : "bg-white/[0.06] text-foreground/45 group-hover:bg-white/10 group-hover:text-foreground/75",
+    )
 
   const modalOpcionBase =
     "rounded-xl border px-4 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -699,7 +712,7 @@ export default function SalePage() {
         </header>
 
         <main className="grid min-h-0 grid-cols-[minmax(0,1fr)_380px]">
-          <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_4.5rem]">
+          <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(4.75rem,auto)]">
             <div className="grid min-h-0 grid-cols-[280px_minmax(0,1fr)]">
               <aside className="flex min-h-0 min-w-0 flex-col border-r border-white/10 bg-[#1a2027]">
                 <nav
@@ -991,61 +1004,125 @@ export default function SalePage() {
               </section>
             </div>
 
-            <div className="grid h-full min-h-0 grid-cols-4 divide-x divide-white/25 border-t border-rootsy-hairline bg-card/98 backdrop-blur-2xl">
+            <div
+              role="toolbar"
+              aria-label="Configuración de la venta"
+              className={cn("grid h-full min-h-0 grid-cols-2 gap-2 lg:grid-cols-4", toolboxBarClass)}
+            >
               <button
                 type="button"
                 onClick={onClienteToolbarClick}
-                className={cn(
-                  toolboxBtnIdle,
-                  nombreCliente && toolboxBtnActivo,
-                )}
+                className={toolboxSlotClass(Boolean(nombreCliente))}
+                aria-label={
+                  nombreCliente
+                    ? `Cliente: ${nombreCliente}. Abrir para cambiar.`
+                    : "Cliente sin elegir. Abrir para seleccionar."
+                }
               >
-                <User className="size-4.5 shrink-0 text-foreground/80" aria-hidden />
-                <span className="min-w-0 max-w-[calc(100%-1.75rem)] truncate text-left text-sm font-semibold leading-tight">
-                  {nombreCliente ?? "Cliente"}
+                <span className={toolboxIconWrap(Boolean(nombreCliente))}>
+                  <User className="size-4.5 sm:size-5" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/45">
+                    Cliente
+                  </span>
+                  <span
+                    className={cn(
+                      "block truncate text-sm font-semibold leading-snug",
+                      nombreCliente ? "text-foreground" : "text-foreground/55",
+                    )}
+                  >
+                    {nombreCliente ?? "Elegir cliente"}
+                  </span>
                 </span>
               </button>
               <button
                 type="button"
                 onClick={() => setComprobanteModalAbierto(true)}
-                className={cn(
-                  toolboxBtnIdle,
-                  comprobante && toolboxBtnActivo,
-                )}
+                className={toolboxSlotClass(Boolean(comprobante))}
+                aria-label={
+                  comprobante
+                    ? `Comprobante: ${comprobante}. Abrir para cambiar.`
+                    : "Comprobante sin elegir. Abrir para seleccionar."
+                }
               >
-                <Receipt className="size-4.5 shrink-0 text-foreground/80" aria-hidden />
-                <span className="min-w-0 max-w-[calc(100%-1.75rem)] truncate text-left text-sm font-semibold leading-tight">
-                  {comprobante ?? "Comprobante"}
+                <span className={toolboxIconWrap(Boolean(comprobante))}>
+                  <Receipt className="size-4.5 sm:size-5" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/45">
+                    Comprobante
+                  </span>
+                  <span
+                    className={cn(
+                      "block truncate text-sm font-semibold leading-snug",
+                      comprobante ? "text-foreground" : "text-foreground/55",
+                    )}
+                  >
+                    {comprobante ?? "Elegir tipo"}
+                  </span>
                 </span>
               </button>
               <button
                 type="button"
                 onClick={() => setPagoModalAbierto(true)}
-                className={cn(
-                  toolboxBtnIdle,
-                  metodoPago && toolboxBtnActivo,
-                )}
+                className={toolboxSlotClass(Boolean(metodoPago))}
+                aria-label={
+                  metodoPago
+                    ? `Pago: ${metodoPago}. Abrir para cambiar.`
+                    : "Medio de pago sin elegir. Abrir para seleccionar."
+                }
               >
-                <Banknote className="size-4.5 shrink-0 text-foreground/80" aria-hidden />
-                <span className="min-w-0 max-w-[calc(100%-1.75rem)] truncate text-left text-sm font-semibold leading-tight">
-                  {metodoPago ?? "Efectivo"}
+                <span className={toolboxIconWrap(Boolean(metodoPago))}>
+                  <Banknote className="size-4.5 sm:size-5" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/45">
+                    Pago
+                  </span>
+                  <span
+                    className={cn(
+                      "block truncate text-sm font-semibold leading-snug",
+                      metodoPago ? "text-foreground" : "text-foreground/55",
+                    )}
+                  >
+                    {metodoPago ?? "Elegir medio"}
+                  </span>
                 </span>
               </button>
               <button
                 type="button"
                 onClick={abrirModalDescuento}
-                className={cn(
-                  toolboxBtnIdle,
-                  hayDescuento && toolboxBtnActivo,
-                )}
+                className={toolboxSlotClass(hayDescuento)}
+                aria-label={
+                  hayDescuento
+                    ? `Descuento aplicado: ${
+                        modoDescuento === "porcentaje"
+                          ? `${valorDescuentoPorcentaje} por ciento`
+                          : `${fmt.format(valorDescuentoFijo)} fijo`
+                      }. Abrir para editar.`
+                    : "Sin descuento en la venta. Abrir para configurar."
+                }
               >
-                <Percent className="size-4.5 shrink-0 text-foreground/80" aria-hidden />
-                <span className="min-w-0 max-w-[calc(100%-1.75rem)] truncate text-left text-sm font-semibold leading-tight">
-                  {hayDescuento
-                    ? modoDescuento === "porcentaje"
-                      ? `${valorDescuentoPorcentaje}%`
-                      : `Fijo ${fmt.format(valorDescuentoFijo)}`
-                    : "Descuento"}
+                <span className={toolboxIconWrap(hayDescuento)}>
+                  <Percent className="size-4.5 sm:size-5" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/45">
+                    Descuento
+                  </span>
+                  <span
+                    className={cn(
+                      "block truncate text-sm font-semibold leading-snug",
+                      hayDescuento ? "text-foreground" : "text-foreground/55",
+                    )}
+                  >
+                    {hayDescuento
+                      ? modoDescuento === "porcentaje"
+                        ? `${valorDescuentoPorcentaje}%`
+                        : `Fijo ${fmt.format(valorDescuentoFijo)}`
+                      : "Sin descuento"}
+                  </span>
                 </span>
               </button>
             </div>
