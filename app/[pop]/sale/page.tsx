@@ -2,7 +2,15 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react"
 import {
   ArrowLeft,
   Banknote,
@@ -19,6 +27,7 @@ import {
   Receipt,
   Rows3,
   Search,
+  Tag,
   Trash2,
   User,
   Wifi,
@@ -37,8 +46,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
 
 type Producto = {
@@ -56,6 +63,11 @@ type ItemCarrito = {
   productoId: string
   cantidad: number
 }
+
+type VistaCatalogo =
+  | { modo: "categoria"; categoria: string }
+  | { modo: "promociones" }
+  | { modo: "con_descuento" }
 
 const CATEGORIAS = [
   "Entradas",
@@ -125,6 +137,26 @@ const PRODUCTOS: Producto[] = [
       "https://images.unsplash.com/photo-1550317138-10000687a72b?w=500&h=340&fit=crop",
     promo: "-25%",
   },
+  {
+    id: "cafe-invierno",
+    nombre: "Café con leche",
+    descripcion: "Campaña estación — precio lista único",
+    precio: 500,
+    categoria: "Bebidas",
+    imagen:
+      "https://images.unsplash.com/photo-1511920170733-2303c14c0048?w=500&h=340&fit=crop",
+    promo: "Campaña invierno",
+  },
+  {
+    id: "jugo-natural",
+    nombre: "Jugo natural",
+    descripcion: "Naranja o pomelo",
+    precio: 280,
+    precioOriginal: 350,
+    categoria: "Bebidas",
+    imagen:
+      "https://images.unsplash.com/photo-1622597439844-0df16348ac85?w=500&h=340&fit=crop",
+  },
 ]
 
 const fmt = new Intl.NumberFormat("es-AR", {
@@ -161,8 +193,145 @@ function normalizarBusqueda(s: string) {
     .toLowerCase()
 }
 
+function CartItemTitleMarquee({
+  text,
+  active,
+  className,
+}: {
+  text: string
+  active: boolean
+  className?: string
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const ghostRef = useRef<HTMLSpanElement>(null)
+  const prevActiveRef = useRef(false)
+  const [truncated, setTruncated] = useState(false)
+  const [marqueeKey, setMarqueeKey] = useState(0)
+  const [reduceMotion, setReduceMotion] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
+    setReduceMotion(mq.matches)
+    const fn = () => setReduceMotion(mq.matches)
+    mq.addEventListener("change", fn)
+    return () => mq.removeEventListener("change", fn)
+  }, [])
+
+  const syncMeasure = useCallback(() => {
+    const c = containerRef.current
+    const g = ghostRef.current
+    if (!c || !g || !text) {
+      setTruncated(false)
+      return
+    }
+    setTruncated(g.scrollWidth > c.clientWidth + 1)
+  }, [text])
+
+  useLayoutEffect(() => {
+    if (!active || !text) {
+      setTruncated(false)
+      prevActiveRef.current = active
+      return
+    }
+    if (active && !prevActiveRef.current) {
+      setMarqueeKey((k) => k + 1)
+    }
+    prevActiveRef.current = active
+    syncMeasure()
+    const id = requestAnimationFrame(syncMeasure)
+    return () => cancelAnimationFrame(id)
+  }, [active, text, syncMeasure])
+
+  useEffect(() => {
+    if (!active || !text) return
+    const c = containerRef.current
+    if (!c || typeof ResizeObserver === "undefined") return
+    const ro = new ResizeObserver(syncMeasure)
+    ro.observe(c)
+    return () => ro.disconnect()
+  }, [active, text, syncMeasure])
+
+  if (!text) return null
+
+  const durationSec = Math.min(28, Math.max(12, text.length * 0.42))
+  const marqueeStyle = {
+    "--rootsy-cart-marquee-duration": `${durationSec}s`,
+  } as CSSProperties
+
+  const ghost = (
+    <span
+      ref={ghostRef}
+      className={cn(
+        "pointer-events-none absolute top-0 left-0 max-w-none whitespace-nowrap opacity-0",
+        className,
+      )}
+      aria-hidden
+    >
+      {text}
+    </span>
+  )
+
+  const segment = (duplicate: boolean) => (
+    <span
+      className="inline-flex shrink-0 items-center"
+      aria-hidden={duplicate ? true : undefined}
+    >
+      <span className={className}>{text}</span>
+      <span className="inline-flex h-5 min-w-10 shrink-0 items-center justify-center px-1 text-sm font-medium text-[#8a9aaf]">
+        ·
+      </span>
+    </span>
+  )
+
+  if (!active) {
+    return (
+      <div ref={containerRef} className="relative min-w-0 overflow-hidden">
+        {ghost}
+        <p className={cn("line-clamp-1", className)}>{text}</p>
+      </div>
+    )
+  }
+
+  if (reduceMotion && truncated) {
+    return (
+      <div ref={containerRef} className="relative min-w-0 overflow-hidden">
+        {ghost}
+        <p className={cn("wrap-break-word", className)}>{text}</p>
+      </div>
+    )
+  }
+
+  if (!truncated) {
+    return (
+      <div ref={containerRef} className="relative min-w-0 overflow-hidden">
+        {ghost}
+        <p className={cn("line-clamp-1", className)}>{text}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div ref={containerRef} className="relative min-w-0 overflow-hidden">
+      {ghost}
+      <div className="rootsy-cart-item-marquee-fade overflow-hidden">
+        <div
+          key={marqueeKey}
+          className="rootsy-cart-title-marquee-track"
+          style={marqueeStyle}
+        >
+          {segment(false)}
+          {segment(true)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function SalePage() {
-  const [categoriaActiva, setCategoriaActiva] = useState<string>("Principales")
+  const [vistaCatalogo, setVistaCatalogo] = useState<VistaCatalogo>({
+    modo: "categoria",
+    categoria: "Principales",
+  })
   const [modoVista, setModoVista] = useState<"grid" | "lista">("grid")
   const [busqueda, setBusqueda] = useState("")
   const [carrito, setCarrito] = useState<ItemCarrito[]>([
@@ -202,14 +371,19 @@ export default function SalePage() {
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
     return PRODUCTOS.filter((p) => {
-      const matchCat = p.categoria === categoriaActiva
+      const matchVista =
+        vistaCatalogo.modo === "categoria"
+          ? p.categoria === vistaCatalogo.categoria
+          : vistaCatalogo.modo === "promociones"
+            ? Boolean(p.promo?.trim())
+            : p.precioOriginal != null && p.precioOriginal > p.precio
       const matchQ =
         !q ||
         p.nombre.toLowerCase().includes(q) ||
         p.descripcion.toLowerCase().includes(q)
-      return matchCat && matchQ
+      return matchVista && matchQ
     })
-  }, [busqueda, categoriaActiva])
+  }, [busqueda, vistaCatalogo])
 
   const itemsDetallados = useMemo(() => {
     return carrito
@@ -379,10 +553,16 @@ export default function SalePage() {
       setValorDescuentoPorcentaje(pct)
       setValorDescuentoFijo(0)
     } else {
-      const tope = Math.min(n, subtotal)
-      setModoDescuento("fijo")
-      setValorDescuentoFijo(Math.max(0, tope))
-      setValorDescuentoPorcentaje(0)
+      if (subtotal > 0 && n > subtotal) {
+        setModoDescuento("porcentaje")
+        setValorDescuentoPorcentaje(100)
+        setValorDescuentoFijo(0)
+      } else {
+        const tope = Math.min(n, subtotal)
+        setModoDescuento("fijo")
+        setValorDescuentoFijo(Math.max(0, tope))
+        setValorDescuentoPorcentaje(0)
+      }
     }
     setDescuentoModalAbierto(false)
   }
@@ -523,28 +703,63 @@ export default function SalePage() {
             <div className="grid min-h-0 grid-cols-[280px_minmax(0,1fr)]">
               <aside className="border-r border-white/10 bg-[#1a2027] px-4 py-4">
                 <div className="overflow-hidden rounded-lg border border-white/10">
-                  {CATEGORIAS.map((cat) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setCategoriaActiva(cat)}
-                      className={`flex h-12 w-full items-center border-b border-white/8 px-3 text-left text-sm font-semibold transition last:border-b-0 ${
-                        categoriaActiva === cat
-                          ? "bg-slate-100/14 text-white"
-                          : "text-slate-300/80 hover:bg-white/8 hover:text-white"
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+                  {CATEGORIAS.map((cat) => {
+                    const seleccionado =
+                      vistaCatalogo.modo === "categoria" &&
+                      vistaCatalogo.categoria === cat
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() =>
+                          setVistaCatalogo({ modo: "categoria", categoria: cat })
+                        }
+                        className={`flex h-12 w-full items-center border-b border-white/8 px-3 text-left text-sm font-semibold transition last:border-b-0 ${
+                          seleccionado
+                            ? "bg-slate-100/14 text-white"
+                            : "text-slate-300/80 hover:bg-white/8 hover:text-white"
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    )
+                  })}
                 </div>
 
-                <Button
-                  type="button"
-                  className="mt-3 h-11 w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  Promociones
-                </Button>
+                <div className="mt-3 space-y-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    aria-pressed={vistaCatalogo.modo === "promociones"}
+                    onClick={() => setVistaCatalogo({ modo: "promociones" })}
+                    className={cn(
+                      "h-10 w-full rounded-lg text-sm font-medium shadow-none",
+                      vistaCatalogo.modo === "promociones"
+                        ? "border-2 border-emerald-500/55 bg-emerald-500/8 text-emerald-100 hover:border-emerald-400/65 hover:bg-emerald-500/12 hover:text-emerald-50"
+                        : "border border-white/10 bg-white/3 text-slate-400 hover:border-emerald-600/35 hover:bg-white/6 hover:text-slate-200",
+                    )}
+                  >
+                    <Tag className="size-3.5 opacity-90" aria-hidden />
+                    Promociones
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    aria-pressed={vistaCatalogo.modo === "con_descuento"}
+                    onClick={() =>
+                      setVistaCatalogo({ modo: "con_descuento" })
+                    }
+                    className={cn(
+                      "h-10 w-full rounded-lg text-sm font-medium shadow-none",
+                      vistaCatalogo.modo === "con_descuento"
+                        ? "border-2 border-amber-500/55 bg-amber-500/8 text-amber-100 hover:border-amber-400/65 hover:bg-amber-500/12 hover:text-amber-50"
+                        : "border border-white/10 bg-white/3 text-slate-400 hover:border-amber-600/35 hover:bg-white/6 hover:text-slate-200",
+                    )}
+                  >
+                    <Percent className="size-3.5 opacity-90" aria-hidden />
+                    Con descuento
+                  </Button>
+                </div>
               </aside>
 
               <section className="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] bg-[#20262e]">
@@ -797,13 +1012,6 @@ export default function SalePage() {
                     descuentoRaw.trim().replace(",", "."),
                   )
                   const precioBaseItem = (item.producto?.precio ?? 0) * item.cantidad
-                  const descuentoPctAplicado =
-                    precioBaseItem > 0
-                      ? Math.min(
-                          100,
-                          Math.max(0, Math.round((descuento / precioBaseItem) * 100)),
-                        )
-                      : 0
                   const tieneComentario = comentario.trim().length > 0
                   const tieneDescuento = descuento > 0
 
@@ -811,7 +1019,12 @@ export default function SalePage() {
                     <div key={itemId} className="space-y-1.5">
                       <div
                         onClick={() => toggleItemDetalle(itemId)}
-                        className="cursor-pointer rounded-xl border border-[#dce3eb] bg-white px-3 py-2.5 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_8px_18px_rgba(15,23,42,0.06)]"
+                        className={cn(
+                          "cursor-pointer rounded-xl border bg-white px-3 py-2.5 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_8px_18px_rgba(15,23,42,0.06)]",
+                          abierto
+                            ? "border-2 border-[#7d8fa3]"
+                            : "border border-[#dce3eb]",
+                        )}
                       >
                         <div className="grid grid-cols-[56px_minmax(0,1fr)_90px_28px] items-center gap-2">
                         <div className="flex items-center gap-1 rounded-lg bg-white px-1 py-1 ring-1 ring-[#d5dbe2]">
@@ -840,23 +1053,27 @@ export default function SalePage() {
                           </button>
                         </div>
                         <div className="min-w-0">
-                          <p className="line-clamp-1 text-sm font-semibold text-[#151a20]">
-                            {item.producto?.nombre}
-                          </p>
-                          <div className="mt-0.5 flex items-center gap-1">
-                            <p className="line-clamp-1 text-xs text-[#5d6978]">
-                              {item.producto?.descripcion}
-                            </p>
+                          <CartItemTitleMarquee
+                            text={item.producto?.nombre ?? ""}
+                            active={abierto}
+                            className="text-sm font-semibold text-[#151a20]"
+                          />
+                          <div className="mt-0.5 flex min-w-0 items-center gap-1">
+                            <div className="min-w-0 flex-1">
+                              <p className="line-clamp-1 text-xs text-[#5d6978]">
+                                {item.producto?.descripcion}
+                              </p>
+                            </div>
                             {tieneComentario ? (
                               <span className="inline-flex shrink-0 items-center rounded-full border border-sky-200 bg-sky-50 px-1.5 py-0 text-[10px] font-semibold text-sky-700">
                                 C
                               </span>
                             ) : null}
                             {tieneDescuento ? (
-                              <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0 text-[10px] font-semibold text-emerald-700">
+                              <span className="inline-flex max-w-22 shrink-0 items-center justify-center truncate rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0 text-[10px] font-semibold text-emerald-700 tabular-nums">
                                 {modoItemDescuento === "porcentaje"
-                                  ? `${Math.min(100, Math.max(0, descuentoNumero))}%`
-                                  : `${descuentoPctAplicado}%`}
+                                  ? `${Math.min(100, Math.max(0, Number.isFinite(descuentoNumero) ? descuentoNumero : 0))}%`
+                                  : fmt.format(descuento)}
                               </span>
                             ) : null}
                           </div>
@@ -887,12 +1104,12 @@ export default function SalePage() {
                       {abierto ? (
                         <div
                           onClick={(e) => e.stopPropagation()}
-                          className="rounded-lg border border-[#d5deea] bg-[#eaf1fb] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
+                          className="rounded-lg border border-slate-300/90 bg-slate-200/90 px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
                         >
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#c7d4e4] bg-white text-[#5f748c] transition-colors hover:bg-[#f6f9fd] hover:text-[#3f5268]"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-400/50 bg-slate-100 text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
                               aria-label="Cambiar tipo de descuento"
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -949,10 +1166,10 @@ export default function SalePage() {
                               placeholder="descuento"
                               inputMode="numeric"
                               pattern="[0-9]*"
-                              className="h-8 w-26 border-[#c7d4e4] bg-white! shadow-none text-xs placeholder:text-[#7e92aa]"
+                              className="h-8 w-26 border border-slate-300 bg-white! text-[#121417] shadow-none text-xs placeholder:text-slate-500"
                             />
                             <div className="relative min-w-0 flex-1">
-                              <MessageSquare className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-[#67819a]" />
+                              <MessageSquare className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-slate-500" />
                               <Input
                                 value={comentario}
                                 onChange={(e) =>
@@ -962,7 +1179,7 @@ export default function SalePage() {
                                   }))
                                 }
                                 placeholder="agregá un comentario..."
-                                className="h-8 border-[#c7d4e4] bg-white! shadow-none pl-8 text-xs placeholder:text-[#7e92aa]"
+                                className="h-8 border border-slate-300 bg-white! pl-8 text-[#121417] text-xs shadow-none placeholder:text-slate-500"
                               />
                             </div>
                           </div>
@@ -1300,69 +1517,69 @@ export default function SalePage() {
           <DialogHeader>
             <DialogTitle>Descuento</DialogTitle>
             <DialogDescription>
-              Aplicá un descuento por porcentaje o un monto fijo sobre el
-              subtotal.
+              Elegí % o monto fijo con el interruptor y escribí el valor. Se
+              aplica sobre el subtotal de la venta (después de descuentos por
+              ítem).
             </DialogDescription>
           </DialogHeader>
-          <RadioGroup
-            value={descuentoDraftModo}
-            onValueChange={(v) =>
-              setDescuentoDraftModo(v as "porcentaje" | "fijo")
-            }
-            className="grid gap-2"
-          >
-            <label
-              htmlFor="desc-pct"
-              className={cn(
-                "flex w-full cursor-pointer items-center gap-3 text-left",
-                modalOpcionBase,
-                descuentoDraftModo === "porcentaje"
-                  ? modalOpcionSeleccionada
-                  : modalOpcionIdle,
-              )}
-            >
-              <RadioGroupItem value="porcentaje" id="desc-pct" />
-              <span className="font-semibold">Porcentaje</span>
-            </label>
-            <label
-              htmlFor="desc-fijo"
-              className={cn(
-                "flex w-full cursor-pointer items-center gap-3 text-left",
-                modalOpcionBase,
-                descuentoDraftModo === "fijo"
-                  ? modalOpcionSeleccionada
-                  : modalOpcionIdle,
-              )}
-            >
-              <RadioGroupItem value="fijo" id="desc-fijo" />
-              <span className="font-semibold">Monto fijo</span>
-            </label>
-          </RadioGroup>
           <div className="space-y-2">
-            <Label htmlFor="desc-valor">
-              {descuentoDraftModo === "porcentaje"
-                ? "Porcentaje (%)"
-                : "Monto fijo (ARS)"}
-            </Label>
-            <Input
-              id="desc-valor"
-              value={descuentoDraftTexto}
-              onChange={(e) => setDescuentoDraftTexto(e.target.value)}
-              placeholder={
-                descuentoDraftModo === "porcentaje" ? "Ej. 10" : "Ej. 500"
-              }
-              inputMode="decimal"
-              autoComplete="off"
-              max={
-                descuentoDraftModo === "fijo" && subtotal > 0
-                  ? subtotal
-                  : undefined
-              }
-            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className={cn(
+                  "inline-flex size-10 shrink-0 items-center justify-center rounded-xl border text-foreground/80 transition",
+                  "border-foreground/10 bg-muted/50 hover:bg-muted hover:text-foreground",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                )}
+                aria-label="Cambiar tipo de descuento"
+                onClick={() =>
+                  setDescuentoDraftModo((m) =>
+                    m === "porcentaje" ? "fijo" : "porcentaje",
+                  )
+                }
+              >
+                {descuentoDraftModo === "porcentaje" ? (
+                  <Percent className="size-4 text-primary" aria-hidden />
+                ) : (
+                  <Banknote className="size-4 text-primary" aria-hidden />
+                )}
+              </button>
+              <Input
+                id="desc-valor"
+                value={descuentoDraftTexto}
+                onChange={(e) => {
+                  const raw = e.target.value
+                  if (!/^\d*$/.test(raw)) return
+                  if (raw === "") {
+                    setDescuentoDraftTexto("")
+                    return
+                  }
+                  if (
+                    descuentoDraftModo === "fijo" &&
+                    subtotal > 0 &&
+                    Number(raw) > subtotal
+                  ) {
+                    setDescuentoDraftModo("porcentaje")
+                    setDescuentoDraftTexto("100")
+                    return
+                  }
+                  const nextValue =
+                    descuentoDraftModo === "porcentaje"
+                      ? String(Math.min(100, Number(raw)))
+                      : raw
+                  setDescuentoDraftTexto(nextValue)
+                }}
+                placeholder="descuento"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="off"
+                className="h-10 min-w-0 flex-1"
+              />
+            </div>
             {descuentoDraftModo === "fijo" && subtotal > 0 ? (
               <p className="text-xs text-muted-foreground">
-                Máximo aplicable: {fmt.format(subtotal)}. Si la venta baja de
-                precio, el descuento fijo se ajusta solo hasta ese tope.
+                Máximo aplicable: {fmt.format(subtotal)}. Si superás ese monto,
+                pasa a 100 %.
               </p>
             ) : null}
             {descuentoDraftModo === "fijo" && subtotal === 0 ? (

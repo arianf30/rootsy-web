@@ -393,6 +393,30 @@
     );
   }
 
+  .rootsy-cart-title-marquee-track {
+    display: inline-flex;
+    width: max-content;
+    animation: rootsy-marquee-x var(--rootsy-cart-marquee-duration, 16s) linear
+      infinite;
+  }
+
+  .rootsy-cart-item-marquee-fade {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 4%,
+      black 96%,
+      transparent
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 4%,
+      black 96%,
+      transparent
+    );
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .rootsy-ambient-pulse {
       animation: none;
@@ -423,6 +447,10 @@
     }
     .rootsy-mascot-orb {
       animation: none;
+    }
+    .rootsy-cart-title-marquee-track {
+      animation: none;
+      transform: none;
     }
     .rootsy-card-tilt {
       transform: none;
