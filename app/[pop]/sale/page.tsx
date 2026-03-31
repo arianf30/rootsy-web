@@ -851,30 +851,47 @@ export default function SalePage() {
                           : "flex flex-col gap-2"
                       }
                     >
-                      {productosFiltrados.map((p) => (
+                      {productosFiltrados.map((p) => {
+                        const descuentoPct =
+                          p.precioOriginal != null &&
+                          p.precioOriginal > p.precio
+                            ? Math.round(
+                                ((p.precioOriginal - p.precio) /
+                                  p.precioOriginal) *
+                                  100,
+                              )
+                            : null
+                        const promoTrim = p.promo?.trim() ?? ""
+                        const mostrarBadgeOferta =
+                          descuentoPct != null || promoTrim.length > 0
+
+                        return (
                         <button
                           key={p.id}
                           type="button"
                           onClick={() => agregarAlCarrito(p.id)}
-                          className={`group relative w-full overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition-all duration-300 hover:shadow-md ${
+                          className={cn(
+                            "group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-[#252b34] text-left",
+                            "shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_0_0_1px_rgba(0,0,0,0.45),0_1px_2px_rgba(0,0,0,0.22),0_6px_16px_rgba(0,0,0,0.28),0_16px_40px_rgba(0,0,0,0.38)]",
+                            "before:pointer-events-none before:absolute before:inset-y-4 before:left-0 before:z-10 before:w-0.5 before:rounded-full before:bg-emerald-400 before:opacity-0 before:transition-opacity before:duration-300 group-hover:before:opacity-90",
                             modoVista === "lista"
                               ? "flex min-h-[152px] items-stretch"
-                              : "grid h-[318px] grid-rows-[152px_1fr]"
-                          }`}
+                              : "grid h-[318px] grid-rows-[152px_1fr]",
+                          )}
                         >
-                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-linear-to-r from-transparent via-emerald-400/65 to-transparent" />
                           <div
-                            className={`relative overflow-hidden bg-[#0f1416] ${
+                            className={cn(
+                              "relative overflow-hidden bg-[#0f1416]",
                               modoVista === "grid"
                                 ? "h-full w-full"
-                                : "h-[152px] w-48 shrink-0"
-                            }`}
+                                : "h-[152px] w-48 shrink-0",
+                            )}
                           >
                             <Image
                               src={p.imagen}
                               alt={p.nombre}
                               fill
-                              className="h-full w-full"
+                              className="h-full w-full transition-transform duration-300 ease-out group-hover:scale-[1.03]"
                               unoptimized
                               sizes={modoVista === "grid" ? "33vw" : "280px"}
                               style={{
@@ -882,11 +899,22 @@ export default function SalePage() {
                                 objectPosition: "center",
                               }}
                             />
-                            {p.promo ? (
-                              <Badge className="absolute left-3 top-3 border-0 bg-destructive text-[10px] font-bold tracking-wider text-white">
-                                OFERTA
-                              </Badge>
+                            {mostrarBadgeOferta ? (
+                              <div
+                                className="pointer-events-none absolute inset-x-0 top-0 z-15 p-3"
+                                aria-hidden
+                              >
+                                <Badge className="w-fit border border-emerald-400/40 bg-emerald-950/85 px-2 py-0.5 text-[10px] font-bold tracking-wider text-emerald-100 shadow-sm backdrop-blur-sm">
+                                  OFERTA
+                                </Badge>
+                              </div>
                             ) : null}
+                            <span
+                              className="pointer-events-none absolute right-2 bottom-2 z-20 flex size-9 items-center justify-center rounded-full border border-emerald-300/45 bg-emerald-500 text-emerald-950 opacity-0 shadow-[0_4px_20px_rgba(16,185,129,0.5)] transition-[opacity,transform] duration-200 translate-y-1 scale-95 group-hover:translate-y-0 group-hover:scale-100 group-hover:opacity-100"
+                              aria-hidden
+                            >
+                              <Plus className="size-4.5" strokeWidth={2.5} aria-hidden />
+                            </span>
                           </div>
                           <div
                             className={
@@ -909,29 +937,27 @@ export default function SalePage() {
                                 modoVista === "grid" ? "self-end" : "shrink-0"
                               }
                             >
-                              {p.precioOriginal ? (
-                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              {p.precioOriginal != null &&
+                              p.precioOriginal > p.precio ? (
+                                <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                                   <span className="text-sm font-semibold text-muted-foreground line-through">
                                     {fmt.format(p.precioOriginal)}
                                   </span>
-                                  <span className="inline-flex h-6 items-center justify-center rounded-full bg-destructive/12 px-2 text-[10px] font-bold uppercase tracking-wider leading-none text-destructive ring-1 ring-destructive/25">
-                                    Oferta -
-                                    {Math.round(
-                                      ((p.precioOriginal - p.precio) /
-                                        p.precioOriginal) *
-                                        100,
-                                    )}
-                                    %
-                                  </span>
+                                  {descuentoPct != null ? (
+                                    <span className="inline-flex h-6 items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 text-[10px] font-bold uppercase tracking-wider leading-none text-emerald-200">
+                                      −{descuentoPct}%
+                                    </span>
+                                  ) : null}
                                 </div>
                               ) : null}
-                              <span className="mt-1 block text-[clamp(1.16rem,1.9vw,1.5rem)] leading-none font-extrabold tracking-tight text-white">
+                              <span className="block text-[clamp(1.16rem,1.9vw,1.5rem)] leading-none font-extrabold tracking-tight text-white">
                                 {fmt.format(p.precio)}
                               </span>
                             </div>
                           </div>
                         </button>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
