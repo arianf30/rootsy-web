@@ -1342,7 +1342,11 @@ export default function SalePage() {
                 </div>
               </div>
 
-              <div className="relative flex h-18 min-h-18 w-full shrink-0 items-center justify-between overflow-hidden border-t border-emerald-500/35 px-4 backdrop-blur-xl">
+              <div
+                role="region"
+                aria-label="Total a cobrar de esta venta"
+                className="relative flex min-h-19 w-full shrink-0 flex-col justify-center overflow-hidden border-t border-emerald-500/35 px-4 py-3.5 backdrop-blur-xl sm:min-h-20 sm:px-5 sm:py-4"
+              >
                 <div
                   className="pointer-events-none absolute inset-0 bg-[linear-gradient(145deg,#07120e_0%,#0c1f17_42%,#061009_100%)]"
                   aria-hidden
@@ -1364,18 +1368,43 @@ export default function SalePage() {
                   aria-hidden
                 />
 
-                <span className="relative z-10 shrink-0 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-200/90">
-                  Total
-                </span>
-                <div className="relative z-10 ml-auto flex min-w-max flex-col items-end justify-center text-right leading-none">
-                  {hayDescuento ? (
-                    <p className="mb-1 text-[11px] text-white/35 line-through tabular-nums">
-                      {fmt.format(subtotal)}
+                <div className="relative z-10 flex w-full items-end justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/80">
+                      Total a cobrar
                     </p>
-                  ) : null}
-                  <p className="whitespace-nowrap text-[clamp(1.35rem,2.2vw,1.9rem)] font-black tabular-nums text-white drop-shadow-[0_0_24px_rgba(52,211,153,0.35)]">
-                    {fmt.format(total)}
-                  </p>
+                    {hayDescuento ? (
+                      <p className="mt-1 max-w-44 text-[10px] leading-snug text-white/40">
+                        Incluye descuento general sobre el subtotal.
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex min-w-0 shrink-0 flex-col items-end text-right">
+                    {hayDescuento ? (
+                      <>
+                        <p className="text-[11px] tabular-nums text-white/38 line-through decoration-white/25">
+                          {fmt.format(subtotal)}
+                        </p>
+                        <p className="mt-0.5 text-[11px] font-medium tabular-nums text-emerald-300/95">
+                          −{fmt.format(descuentoMonto)}
+                        </p>
+                        <div
+                          className="my-1.5 h-px w-12 max-w-full bg-linear-to-r from-emerald-400/50 to-transparent"
+                          aria-hidden
+                        />
+                      </>
+                    ) : null}
+                    <p
+                      className="whitespace-nowrap text-[clamp(1.25rem,2.1vw,1.85rem)] font-black tabular-nums tracking-tight text-white drop-shadow-[0_0_20px_rgba(52,211,153,0.32)]"
+                      aria-live="polite"
+                      aria-atomic="true"
+                    >
+                      {fmt.format(total)}
+                    </p>
+                    <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/32">
+                      Pesos argentinos
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
