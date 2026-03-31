@@ -267,6 +267,25 @@
     opacity: 0;
   }
 
+  @keyframes rootsy-hero-slide-in-right {
+    from {
+      opacity: 0;
+      filter: blur(12px);
+      transform: translate3d(36px, 0, 0);
+    }
+    to {
+      opacity: 1;
+      filter: blur(0);
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  .rootsy-hero-slide-in-right {
+    animation: rootsy-hero-slide-in-right 1.05s cubic-bezier(0.16, 1, 0.3, 1)
+      forwards;
+    opacity: 0;
+  }
+
   .rootsy-hero-rise-d1 {
     animation-delay: 0.1s;
   }
@@ -384,6 +403,12 @@
     .rootsy-hero-rise-d3,
     .rootsy-hero-rise-d4,
     .rootsy-hero-rise-d5 {
+      animation: none;
+      opacity: 1;
+      filter: none;
+      transform: none;
+    }
+    .rootsy-hero-slide-in-right {
       animation: none;
       opacity: 1;
       filter: none;

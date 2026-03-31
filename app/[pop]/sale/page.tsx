@@ -9,17 +9,22 @@ import {
   CircleCheck,
   CircleX,
   LayoutGrid,
+  Maximize2,
+  Minimize2,
   Minus,
+  MessageSquare,
   MoreVertical,
   Percent,
   Plus,
   Receipt,
   Rows3,
   Search,
-  ShoppingCart,
   Trash2,
   User,
+  Wifi,
+  WifiOff,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -181,6 +186,18 @@ export default function SalePage() {
     "porcentaje" | "fijo"
   >("porcentaje")
   const [descuentoDraftTexto, setDescuentoDraftTexto] = useState("")
+  const [itemDetalleAbiertoId, setItemDetalleAbiertoId] = useState<string | null>(
+    null,
+  )
+  const [itemComentarios, setItemComentarios] = useState<Record<string, string>>({})
+  const [itemDescuentoModo, setItemDescuentoModo] = useState<
+    Record<string, "porcentaje" | "fijo">
+  >({})
+  const [itemDescuentoDraft, setItemDescuentoDraft] = useState<
+    Record<string, string>
+  >({})
+  const [isOnline, setIsOnline] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
@@ -203,7 +220,7 @@ export default function SalePage() {
       .filter((i) => i.producto)
   }, [carrito])
 
-  const subtotal = useMemo(
+  const subtotalBruto = useMemo(
     () =>
       itemsDetallados.reduce(
         (acc, i) => acc + (i.producto?.precio ?? 0) * i.cantidad,
@@ -211,6 +228,33 @@ export default function SalePage() {
       ),
     [itemsDetallados],
   )
+
+  const itemDescuentoMontos = useMemo(() => {
+    const descuentos: Record<string, number> = {}
+    itemsDetallados.forEach((item) => {
+      const itemId = item.productoId
+      const precioBase = (item.producto?.precio ?? 0) * item.cantidad
+      const raw = (itemDescuentoDraft[itemId] ?? "").trim().replace(",", ".")
+      const n = Number.parseFloat(raw)
+      if (!Number.isFinite(n) || n <= 0) {
+        descuentos[itemId] = 0
+        return
+      }
+      const modo = itemDescuentoModo[itemId] ?? "porcentaje"
+      descuentos[itemId] =
+        modo === "porcentaje"
+          ? precioBase * (Math.min(100, Math.max(0, n)) / 100)
+          : Math.min(Math.max(0, n), precioBase)
+    })
+    return descuentos
+  }, [itemsDetallados, itemDescuentoDraft, itemDescuentoModo])
+
+  const descuentoItemsMonto = useMemo(
+    () => Object.values(itemDescuentoMontos).reduce((acc, n) => acc + n, 0),
+    [itemDescuentoMontos],
+  )
+
+  const subtotal = subtotalBruto - descuentoItemsMonto
 
   const descuentoMonto = useMemo(() => {
     if (modoDescuento === "porcentaje") {
@@ -229,6 +273,27 @@ export default function SalePage() {
       setValorDescuentoFijo(Math.max(0, subtotal))
     }
   }, [modoDescuento, subtotal, valorDescuentoFijo])
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine)
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("offline", handleOffline)
+    return () => {
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
+    }
+  }, [])
+
+  useEffect(() => {
+    const syncFullscreen = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement))
+    }
+    syncFullscreen()
+    document.addEventListener("fullscreenchange", syncFullscreen)
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen)
+  }, [])
 
   const clientesFiltradosModal = useMemo(() => {
     const q = normalizarBusqueda(busquedaClienteModal.trim())
@@ -329,10 +394,29 @@ export default function SalePage() {
     setDescuentoModalAbierto(false)
   }
 
-  const toolboxBtnClass =
-    "inline-flex h-11 min-w-[7.5rem] flex-col items-center justify-center gap-0.5 border-foreground/10 bg-secondary px-3 py-1.5 text-center text-foreground/85 hover:bg-muted sm:min-w-[8.25rem] sm:flex-row sm:gap-2 sm:py-2 sm:text-left"
+  const toggleItemDetalle = (itemId: string) => {
+    setItemDetalleAbiertoId((prev) => (prev === itemId ? null : itemId))
+  }
+
+  const toggleFullscreen = async () => {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen()
+      return
+    }
+    await document.documentElement.requestFullscreen()
+  }
+
+  const toolboxBtnIdle =
+    "inline-flex h-full min-h-0 w-full flex-row items-center justify-center gap-2 rounded-none border-0 bg-transparent px-2 py-1 text-foreground/75 shadow-none transition-colors duration-200 hover:bg-muted/45 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
   const toolboxBtnActivo =
-    "border-primary/45 bg-primary/12 text-foreground shadow-[inset_0_0_0_1px_rgba(16,185,129,0.25)] hover:bg-primary/16"
+    "relative text-foreground hover:text-foreground [&_svg]:text-emerald-300/95 after:pointer-events-none after:absolute after:inset-x-2 after:bottom-0 after:z-10 after:h-[3px] after:rounded-full after:bg-linear-to-r after:from-transparent after:via-primary after:to-transparent after:shadow-[0_0_14px_rgba(16,185,129,0.55),0_0_28px_rgba(52,211,153,0.25),0_1px_0_rgba(255,255,255,0.35)_inset] after:content-['']"
+
+  const modalOpcionBase =
+    "rounded-xl border px-4 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+  const modalOpcionSeleccionada =
+    "border-primary/55 bg-primary/12 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.25)]"
+  const modalOpcionIdle =
+    "border-foreground/10 bg-secondary hover:bg-muted"
 
   return (
     <div className="relative h-screen overflow-hidden bg-[#070a09] text-white">
@@ -343,20 +427,50 @@ export default function SalePage() {
 
       <div className="relative z-10 grid h-full grid-rows-[4.5rem_minmax(0,1fr)]">
         <header className="border-b border-rootsy-hairline bg-card/98 backdrop-blur-2xl">
-          <div className="grid h-18 grid-cols-[280px_minmax(0,1fr)_380px] items-center px-4">
-            <div className="flex items-center gap-3">
+          <div className="grid h-18 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 px-4">
+            <div className="flex min-w-0 items-center gap-3">
               <Link
                 href="/1/menu"
-                className="group inline-flex size-10 items-center justify-center rounded-xl border border-foreground/10 bg-secondary text-foreground/70 transition-all hover:bg-muted hover:text-foreground"
+                className="group inline-flex size-10 items-center justify-center rounded-xl border border-foreground/6 bg-secondary text-foreground/70 transition-all hover:border-foreground/12 hover:bg-muted hover:text-foreground"
                 aria-label="Volver"
               >
                 <ArrowLeft className="size-5 transition-transform group-hover:-translate-x-0.5" />
               </Link>
+              <div className="h-6 w-px bg-border" />
+              <div className="flex min-w-0 items-center gap-2.5">
+                <div className="size-8 overflow-hidden rounded-lg ring-1 ring-border">
+                  <img
+                    src="https://api.dicebear.com/7.x/shapes/svg?seed=store1&backgroundColor=1a1f1d"
+                    alt="Logo punto de venta"
+                    className="size-full object-cover"
+                  />
+                </div>
+                <span className="truncate text-sm font-semibold text-foreground/85">
+                  Nuevo Origen
+                </span>
+              </div>
             </div>
 
-            <h1 className="text-center text-[2rem] font-black tracking-tight text-foreground">
-              Vender
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-[1.85rem] font-black tracking-tight text-foreground">
+                Vender
+              </h1>
+              <div
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest",
+                  isOnline
+                    ? "border-emerald-400/35 bg-emerald-500/12 text-emerald-200"
+                    : "border-rose-400/35 bg-rose-500/12 text-rose-200",
+                )}
+              >
+                {isOnline ? (
+                  <Wifi className="size-3" aria-hidden />
+                ) : (
+                  <WifiOff className="size-3" aria-hidden />
+                )}
+                {isOnline ? "Online" : "Offline"}
+              </div>
+            </div>
 
             <div className="flex items-center justify-end gap-2">
               <button
@@ -366,15 +480,38 @@ export default function SalePage() {
               >
                 <MoreVertical className="size-4.5" />
               </button>
-              <div className="rounded-full border border-foreground/10 bg-secondary px-2 py-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-foreground/75">
-                    Nuevo Origen
-                  </span>
-                  <Avatar className="size-7 ring-1 ring-border">
+              <button
+                type="button"
+                onClick={() => void toggleFullscreen()}
+                className="group inline-flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label={
+                  isFullscreen
+                    ? "Salir de pantalla completa"
+                    : "Pantalla completa"
+                }
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="size-4.5" />
+                ) : (
+                  <Maximize2 className="size-4.5" />
+                )}
+              </button>
+              <div className="h-6 w-px bg-border" />
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Avatar className="size-10 ring-1 ring-border">
                     <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=francisco" />
                     <AvatarFallback>FR</AvatarFallback>
                   </Avatar>
+                  <div className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border border-card bg-primary" />
+                </div>
+                <div className="flex flex-col leading-tight">
+                  <span className="text-sm font-semibold text-foreground/85">
+                    Francisco Ruiz
+                  </span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-meadow">
+                    Admin
+                  </span>
                 </div>
               </div>
             </div>
@@ -385,33 +522,6 @@ export default function SalePage() {
           <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_4.5rem]">
             <div className="grid min-h-0 grid-cols-[280px_minmax(0,1fr)]">
               <aside className="border-r border-white/10 bg-[#1a2027] px-4 py-4">
-                <div className="mb-4 inline-flex rounded-lg border border-white/12 bg-black/20 p-1">
-                  <button
-                    type="button"
-                    onClick={() => setModoVista("grid")}
-                    className={`inline-flex h-9 w-10 items-center justify-center rounded-md transition ${
-                      modoVista === "grid"
-                        ? "bg-white/14 text-white"
-                        : "text-slate-300/80 hover:bg-white/8 hover:text-white"
-                    }`}
-                    aria-label="Vista en grilla"
-                  >
-                    <LayoutGrid className="size-4.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setModoVista("lista")}
-                    className={`inline-flex h-9 w-10 items-center justify-center rounded-md transition ${
-                      modoVista === "lista"
-                        ? "bg-white/14 text-white"
-                        : "text-slate-300/80 hover:bg-white/8 hover:text-white"
-                    }`}
-                    aria-label="Vista en columna"
-                  >
-                    <Rows3 className="size-4.5" />
-                  </button>
-                </div>
-
                 <div className="overflow-hidden rounded-lg border border-white/10">
                   {CATEGORIAS.map((cat) => (
                     <button
@@ -438,8 +548,52 @@ export default function SalePage() {
               </aside>
 
               <section className="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] bg-[#20262e]">
-                <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
-                  <div className="relative w-full max-w-md">
+                <div className="flex min-w-0 items-center gap-3 border-b border-white/10 px-4 py-3">
+                  <div className="relative flex h-10 shrink-0 items-center rounded-lg border border-white/12 bg-black/25 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_1px_rgba(16,185,129,0.06)]">
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-y-1 left-1 w-10 rounded-md border border-emerald-300/35 bg-linear-to-b from-emerald-300/22 via-emerald-400/16 to-emerald-500/12 shadow-[0_0_18px_rgba(16,185,129,0.45),inset_0_1px_0_rgba(255,255,255,0.25)] transition-transform duration-300 ease-out"
+                      style={{
+                        transform:
+                          modoVista === "lista"
+                            ? "translateX(2.5rem)"
+                            : "translateX(0)",
+                      }}
+                    />
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-1 bottom-0 h-px bg-linear-to-r from-transparent via-emerald-300/55 to-transparent"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setModoVista("grid")}
+                      className={cn(
+                        "relative z-10 flex h-8 w-10 items-center justify-center rounded-md transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70 focus-visible:ring-offset-0",
+                        modoVista === "grid"
+                          ? "text-white drop-shadow-[0_0_10px_rgba(110,231,183,0.6)]"
+                          : "text-slate-300/80 hover:text-white/95",
+                      )}
+                      aria-label="Vista en grilla"
+                      aria-pressed={modoVista === "grid"}
+                    >
+                      <LayoutGrid className="size-4.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModoVista("lista")}
+                      className={cn(
+                        "relative z-10 flex h-8 w-10 items-center justify-center rounded-md transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70 focus-visible:ring-offset-0",
+                        modoVista === "lista"
+                          ? "text-white drop-shadow-[0_0_10px_rgba(110,231,183,0.6)]"
+                          : "text-slate-300/80 hover:text-white/95",
+                      )}
+                      aria-label="Vista en columna"
+                      aria-pressed={modoVista === "lista"}
+                    >
+                      <Rows3 className="size-4.5" />
+                    </button>
+                  </div>
+                  <div className="relative min-w-0 flex-1 max-w-md">
                     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/40" />
                     <Input
                       value={busqueda}
@@ -448,200 +602,375 @@ export default function SalePage() {
                       className="h-10 border-white/10 bg-black/20 pl-9 text-white placeholder:text-white/35"
                     />
                   </div>
-                  <span className="text-sm font-medium text-white/60">
+                  <span className="shrink-0 text-sm font-medium text-white/60">
                     {productosFiltrados.length} productos mostrados
                   </span>
                 </div>
 
                 <div
-                  className={`game-scroll min-h-0 overflow-y-auto p-3 ${
-                    modoVista === "grid"
-                      ? "grid grid-cols-3 gap-3"
-                      : "flex flex-col gap-2"
-                  }`}
+                  className={cn(
+                    "min-h-0",
+                    productosFiltrados.length === 0
+                      ? "relative overflow-hidden p-0"
+                      : "game-scroll overflow-y-auto p-3",
+                  )}
                 >
-                  {productosFiltrados.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => agregarAlCarrito(p.id)}
-                      className={`group relative overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition-all duration-300 hover:shadow-md ${
-                        modoVista === "lista"
-                          ? "flex min-h-[152px] items-stretch"
-                          : "grid h-[318px] grid-rows-[152px_1fr]"
-                      }`}
+                  {productosFiltrados.length === 0 ? (
+                    <div
+                      aria-live="polite"
+                      className="rootsy-hero-slide-in-right pointer-events-none absolute right-[-50px] bottom-[-25px] z-10"
                     >
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-linear-to-r from-transparent via-emerald-400/65 to-transparent" />
-                      <div
-                        className={`relative ${
-                          modoVista === "grid"
-                            ? "h-full w-full overflow-hidden bg-[#0f1416]"
-                            : "h-full w-48 shrink-0 overflow-hidden"
-                        }`}
-                      >
-                        <Image
-                          src={p.imagen}
-                          alt={p.nombre}
-                          fill
-                          className="h-full w-full"
-                          unoptimized
-                          sizes={modoVista === "grid" ? "33vw" : "280px"}
-                          style={{ objectFit: "cover", objectPosition: "center" }}
-                        />
-                        {p.promo ? (
-                          <Badge className="absolute left-3 top-3 border-0 bg-destructive text-[10px] font-bold tracking-wider text-white">
-                            OFERTA
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <div
-                        className={`grid gap-2 p-5 ${
-                          modoVista === "grid"
-                            ? "h-full grid-rows-[minmax(0,1fr)_auto]"
-                            : "h-full flex-1 grid-rows-[minmax(0,1fr)_auto]"
-                        }`}
-                      >
-                        <div className="self-start">
-                          <h3 className="line-clamp-2 text-lg font-bold leading-tight text-foreground">
-                            {p.nombre}
-                          </h3>
-                          <p className="mt-1 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
-                            {p.descripcion}
-                          </p>
-                        </div>
+                      <Image
+                        src="/empty-products-mascot.png"
+                        alt=""
+                        width={260}
+                        height={260}
+                        className="h-auto w-full max-w-[260px] object-contain opacity-95"
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className={
+                        modoVista === "grid"
+                          ? "grid grid-cols-3 gap-3"
+                          : "flex flex-col gap-2"
+                      }
+                    >
+                      {productosFiltrados.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => agregarAlCarrito(p.id)}
+                          className={`group relative w-full overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition-all duration-300 hover:shadow-md ${
+                            modoVista === "lista"
+                              ? "flex min-h-[152px] items-stretch"
+                              : "grid h-[318px] grid-rows-[152px_1fr]"
+                          }`}
+                        >
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-linear-to-r from-transparent via-emerald-400/65 to-transparent" />
+                          <div
+                            className={`relative overflow-hidden bg-[#0f1416] ${
+                              modoVista === "grid"
+                                ? "h-full w-full"
+                                : "h-[152px] w-48 shrink-0"
+                            }`}
+                          >
+                            <Image
+                              src={p.imagen}
+                              alt={p.nombre}
+                              fill
+                              className="h-full w-full"
+                              unoptimized
+                              sizes={modoVista === "grid" ? "33vw" : "280px"}
+                              style={{
+                                objectFit: "cover",
+                                objectPosition: "center",
+                              }}
+                            />
+                            {p.promo ? (
+                              <Badge className="absolute left-3 top-3 border-0 bg-destructive text-[10px] font-bold tracking-wider text-white">
+                                OFERTA
+                              </Badge>
+                            ) : null}
+                          </div>
+                          <div
+                            className={
+                              modoVista === "grid"
+                                ? "grid h-full min-h-0 gap-2 p-5 grid-rows-[minmax(0,1fr)_auto]"
+                                : "flex min-h-0 min-w-0 flex-1 flex-col justify-between gap-2 p-5"
+                            }
+                          >
+                            <div className="min-h-0 self-start">
+                              <h3 className="line-clamp-2 text-lg font-bold leading-tight text-foreground">
+                                {p.nombre}
+                              </h3>
+                              <p className="mt-1 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
+                                {p.descripcion}
+                              </p>
+                            </div>
 
-                        <div className="self-end">
-                          {p.precioOriginal ? (
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <span className="text-sm font-semibold text-muted-foreground line-through">
-                                {fmt.format(p.precioOriginal)}
-                              </span>
-                              <span className="inline-flex h-6 items-center justify-center rounded-full bg-destructive/12 px-2 text-[10px] font-bold uppercase tracking-wider leading-none text-destructive ring-1 ring-destructive/25">
-                                Oferta -
-                                {Math.round(
-                                  ((p.precioOriginal - p.precio) / p.precioOriginal) * 100,
-                                )}
-                                %
+                            <div
+                              className={
+                                modoVista === "grid" ? "self-end" : "shrink-0"
+                              }
+                            >
+                              {p.precioOriginal ? (
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                  <span className="text-sm font-semibold text-muted-foreground line-through">
+                                    {fmt.format(p.precioOriginal)}
+                                  </span>
+                                  <span className="inline-flex h-6 items-center justify-center rounded-full bg-destructive/12 px-2 text-[10px] font-bold uppercase tracking-wider leading-none text-destructive ring-1 ring-destructive/25">
+                                    Oferta -
+                                    {Math.round(
+                                      ((p.precioOriginal - p.precio) /
+                                        p.precioOriginal) *
+                                        100,
+                                    )}
+                                    %
+                                  </span>
+                                </div>
+                              ) : null}
+                              <span className="mt-1 block text-[clamp(1.16rem,1.9vw,1.5rem)] leading-none font-extrabold tracking-tight text-white">
+                                {fmt.format(p.precio)}
                               </span>
                             </div>
-                          ) : null}
-                          <span className="mt-1 block text-[clamp(1.16rem,1.9vw,1.5rem)] leading-none font-extrabold tracking-tight text-white">
-                            {fmt.format(p.precio)}
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </section>
             </div>
 
-            <div className="flex h-full min-h-0 items-center justify-center border-t border-rootsy-hairline bg-card/98 px-3 backdrop-blur-2xl">
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClienteToolbarClick}
-                  className={`${toolboxBtnClass} ${nombreCliente ? toolboxBtnActivo : ""}`}
-                >
-                  <User className="size-4 shrink-0" aria-hidden />
-                  <span className="max-w-36 truncate text-center text-xs font-semibold leading-tight sm:text-left">
-                    {nombreCliente ?? "Cliente"}
-                  </span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setComprobanteModalAbierto(true)}
-                  className={`${toolboxBtnClass} ${comprobante ? toolboxBtnActivo : ""}`}
-                >
-                  <Receipt className="size-4 shrink-0" aria-hidden />
-                  <span className="max-w-36 truncate text-center text-xs font-semibold leading-tight sm:text-left">
-                    {comprobante ?? "Comprobante"}
-                  </span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setPagoModalAbierto(true)}
-                  className={`${toolboxBtnClass} ${metodoPago ? toolboxBtnActivo : ""}`}
-                >
-                  <Banknote className="size-4 shrink-0" aria-hidden />
-                  <span className="max-w-36 truncate text-center text-xs font-semibold leading-tight sm:text-left">
-                    {metodoPago ?? "Efectivo"}
-                  </span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={abrirModalDescuento}
-                  className={`${toolboxBtnClass} ${hayDescuento ? toolboxBtnActivo : ""}`}
-                >
-                  <Percent className="size-4 shrink-0" aria-hidden />
-                  <span className="max-w-36 truncate text-center text-xs font-semibold leading-tight sm:text-left">
-                    {hayDescuento
-                      ? modoDescuento === "porcentaje"
-                        ? `${valorDescuentoPorcentaje}%`
-                        : `Fijo ${fmt.format(valorDescuentoFijo)}`
-                      : "Descuento"}
-                  </span>
-                </Button>
-              </div>
+            <div className="grid h-full min-h-0 grid-cols-4 divide-x divide-white/25 border-t border-rootsy-hairline bg-card/98 backdrop-blur-2xl">
+              <button
+                type="button"
+                onClick={onClienteToolbarClick}
+                className={cn(
+                  toolboxBtnIdle,
+                  nombreCliente && toolboxBtnActivo,
+                )}
+              >
+                <User className="size-4.5 shrink-0 text-foreground/80" aria-hidden />
+                <span className="min-w-0 max-w-[calc(100%-1.75rem)] truncate text-left text-sm font-semibold leading-tight">
+                  {nombreCliente ?? "Cliente"}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setComprobanteModalAbierto(true)}
+                className={cn(
+                  toolboxBtnIdle,
+                  comprobante && toolboxBtnActivo,
+                )}
+              >
+                <Receipt className="size-4.5 shrink-0 text-foreground/80" aria-hidden />
+                <span className="min-w-0 max-w-[calc(100%-1.75rem)] truncate text-left text-sm font-semibold leading-tight">
+                  {comprobante ?? "Comprobante"}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPagoModalAbierto(true)}
+                className={cn(
+                  toolboxBtnIdle,
+                  metodoPago && toolboxBtnActivo,
+                )}
+              >
+                <Banknote className="size-4.5 shrink-0 text-foreground/80" aria-hidden />
+                <span className="min-w-0 max-w-[calc(100%-1.75rem)] truncate text-left text-sm font-semibold leading-tight">
+                  {metodoPago ?? "Efectivo"}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={abrirModalDescuento}
+                className={cn(
+                  toolboxBtnIdle,
+                  hayDescuento && toolboxBtnActivo,
+                )}
+              >
+                <Percent className="size-4.5 shrink-0 text-foreground/80" aria-hidden />
+                <span className="min-w-0 max-w-[calc(100%-1.75rem)] truncate text-left text-sm font-semibold leading-tight">
+                  {hayDescuento
+                    ? modoDescuento === "porcentaje"
+                      ? `${valorDescuentoPorcentaje}%`
+                      : `Fijo ${fmt.format(valorDescuentoFijo)}`
+                    : "Descuento"}
+                </span>
+              </button>
             </div>
           </section>
 
           <aside className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] bg-[#f3f5f7] text-[#121417]">
             <div className="flex min-h-0 flex-col">
-              <div className="flex h-14 items-center gap-2 border-b border-[#d9dee4] px-4">
-                <ShoppingCart className="size-4.5 text-[#3b4a59]" />
-                <p className="font-semibold">Resumen de la venta</p>
-              </div>
+              <div className="game-scroll min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+                {itemsDetallados.map((item) => {
+                  const itemId = item.productoId
+                  const abierto = itemDetalleAbiertoId === itemId
+                  const comentario = itemComentarios[itemId] ?? ""
+                  const descuento = itemDescuentoMontos[itemId] ?? 0
+                  const modoItemDescuento = itemDescuentoModo[itemId] ?? "porcentaje"
+                  const descuentoRaw = itemDescuentoDraft[itemId] ?? ""
+                  const descuentoNumero = Number.parseFloat(
+                    descuentoRaw.trim().replace(",", "."),
+                  )
+                  const precioBaseItem = (item.producto?.precio ?? 0) * item.cantidad
+                  const descuentoPctAplicado =
+                    precioBaseItem > 0
+                      ? Math.min(
+                          100,
+                          Math.max(0, Math.round((descuento / precioBaseItem) * 100)),
+                        )
+                      : 0
+                  const tieneComentario = comentario.trim().length > 0
+                  const tieneDescuento = descuento > 0
 
-              <div className="game-scroll min-h-0 flex-1 overflow-y-auto">
-                {itemsDetallados.map((item) => (
-                  <div
-                    key={item.productoId}
-                    className="grid grid-cols-[56px_minmax(0,1fr)_90px_28px] items-center gap-2 border-b border-[#e2e7ec] px-3 py-2"
-                  >
-                    <div className="flex items-center gap-1 rounded-lg bg-white px-1 py-1 ring-1 ring-[#d5dbe2]">
-                      <button
-                        type="button"
-                        onClick={() => cambiarCantidad(item.productoId, -1)}
-                        className="inline-flex size-5 items-center justify-center rounded bg-[#eef2f6] text-[#324255] hover:bg-[#dfe6ee]"
+                  return (
+                    <div key={itemId} className="space-y-1.5">
+                      <div
+                        onClick={() => toggleItemDetalle(itemId)}
+                        className="cursor-pointer rounded-xl border border-[#dce3eb] bg-white px-3 py-2.5 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_8px_18px_rgba(15,23,42,0.06)]"
                       >
-                        <Minus className="size-3" />
-                      </button>
-                      <span className="w-4 text-center text-sm font-bold text-[#1d232b]">
-                        {item.cantidad}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => cambiarCantidad(item.productoId, 1)}
-                        className="inline-flex size-5 items-center justify-center rounded bg-[#eef2f6] text-[#324255] hover:bg-[#dfe6ee]"
-                      >
-                        <Plus className="size-3" />
-                      </button>
+                        <div className="grid grid-cols-[56px_minmax(0,1fr)_90px_28px] items-center gap-2">
+                        <div className="flex items-center gap-1 rounded-lg bg-white px-1 py-1 ring-1 ring-[#d5dbe2]">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              cambiarCantidad(itemId, -1)
+                            }}
+                            className="inline-flex size-5 items-center justify-center rounded bg-[#eef2f6] text-[#324255] hover:bg-[#dfe6ee]"
+                          >
+                            <Minus className="size-3" />
+                          </button>
+                          <span className="w-4 text-center text-sm font-bold text-[#1d232b]">
+                            {item.cantidad}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              cambiarCantidad(itemId, 1)
+                            }}
+                            className="inline-flex size-5 items-center justify-center rounded bg-[#eef2f6] text-[#324255] hover:bg-[#dfe6ee]"
+                          >
+                            <Plus className="size-3" />
+                          </button>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="line-clamp-1 text-sm font-semibold text-[#151a20]">
+                            {item.producto?.nombre}
+                          </p>
+                          <div className="mt-0.5 flex items-center gap-1">
+                            <p className="line-clamp-1 text-xs text-[#5d6978]">
+                              {item.producto?.descripcion}
+                            </p>
+                            {tieneComentario ? (
+                              <span className="inline-flex shrink-0 items-center rounded-full border border-sky-200 bg-sky-50 px-1.5 py-0 text-[10px] font-semibold text-sky-700">
+                                C
+                              </span>
+                            ) : null}
+                            {tieneDescuento ? (
+                              <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0 text-[10px] font-semibold text-emerald-700">
+                                {modoItemDescuento === "porcentaje"
+                                  ? `${Math.min(100, Math.max(0, descuentoNumero))}%`
+                                  : `${descuentoPctAplicado}%`}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {tieneDescuento ? (
+                            <p className="text-[11px] text-[#7a8796] line-through">
+                              {fmt.format(precioBaseItem)}
+                            </p>
+                          ) : null}
+                          <p className="text-sm font-bold text-[#151a20]">
+                            {fmt.format(precioBaseItem - descuento)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            quitarDelCarrito(itemId)
+                          }}
+                          className="inline-flex size-7 items-center justify-center rounded text-[#7a8796] hover:bg-[#e5ebf2] hover:text-[#1f2a36]"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                        </div>
+                      </div>
+
+                      {abierto ? (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="rounded-lg border border-[#d5deea] bg-[#eaf1fb] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
+                        >
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#c7d4e4] bg-white text-[#5f748c] transition-colors hover:bg-[#f6f9fd] hover:text-[#3f5268]"
+                              aria-label="Cambiar tipo de descuento"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setItemDescuentoModo((prev) => ({
+                                  ...prev,
+                                  [itemId]:
+                                    (prev[itemId] ?? "porcentaje") === "porcentaje"
+                                      ? "fijo"
+                                      : "porcentaje",
+                                }))
+                              }}
+                            >
+                              {modoItemDescuento === "porcentaje" ? (
+                                <Percent className="size-3.5" />
+                              ) : (
+                                <Banknote className="size-3.5" />
+                              )}
+                            </button>
+                            <Input
+                              value={itemDescuentoDraft[itemId] ?? ""}
+                              onChange={(e) => {
+                                const raw = e.target.value
+                                if (!/^\d*$/.test(raw)) return
+                                if (raw === "") {
+                                  setItemDescuentoDraft((prev) => ({
+                                    ...prev,
+                                    [itemId]: "",
+                                  }))
+                                  return
+                                }
+                                if (
+                                  modoItemDescuento === "fijo" &&
+                                  Number(raw) > precioBaseItem
+                                ) {
+                                  setItemDescuentoModo((prev) => ({
+                                    ...prev,
+                                    [itemId]: "porcentaje",
+                                  }))
+                                  setItemDescuentoDraft((prev) => ({
+                                    ...prev,
+                                    [itemId]: "100",
+                                  }))
+                                  return
+                                }
+                                const nextValue =
+                                  modoItemDescuento === "porcentaje"
+                                    ? String(Math.min(100, Number(raw)))
+                                    : raw
+                                setItemDescuentoDraft((prev) => ({
+                                  ...prev,
+                                  [itemId]: nextValue,
+                                }))
+                              }}
+                              placeholder="descuento"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              className="h-8 w-26 border-[#c7d4e4] bg-white! shadow-none text-xs placeholder:text-[#7e92aa]"
+                            />
+                            <div className="relative min-w-0 flex-1">
+                              <MessageSquare className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-[#67819a]" />
+                              <Input
+                                value={comentario}
+                                onChange={(e) =>
+                                  setItemComentarios((prev) => ({
+                                    ...prev,
+                                    [itemId]: e.target.value,
+                                  }))
+                                }
+                                placeholder="agregá un comentario..."
+                                className="h-8 border-[#c7d4e4] bg-white! shadow-none pl-8 text-xs placeholder:text-[#7e92aa]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
-                    <div className="min-w-0">
-                      <p className="line-clamp-1 text-sm font-semibold text-[#151a20]">
-                        {item.producto?.nombre}
-                      </p>
-                      <p className="line-clamp-1 text-xs text-[#5d6978]">
-                        {item.producto?.descripcion}
-                      </p>
-                    </div>
-                    <p className="text-right text-sm font-bold text-[#151a20]">
-                      {fmt.format((item.producto?.precio ?? 0) * item.cantidad)}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => quitarDelCarrito(item.productoId)}
-                      className="inline-flex size-7 items-center justify-center rounded text-[#7a8796] hover:bg-[#e5ebf2] hover:text-[#1f2a36]"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
 
@@ -732,24 +1061,39 @@ export default function SalePage() {
               autoComplete="off"
             />
           </div>
-          <ul className="game-scroll max-h-60 space-y-2 overflow-y-auto pr-1">
+          <ul
+            className="game-scroll max-h-60 space-y-2 overflow-y-auto pr-1"
+            role="listbox"
+            aria-label="Clientes"
+          >
             {clientesFiltradosModal.length === 0 ? (
               <li className="rounded-lg border border-dashed border-foreground/15 px-3 py-6 text-center text-sm text-muted-foreground">
                 No hay resultados para esa búsqueda.
               </li>
             ) : (
-              clientesFiltradosModal.map((nombre) => (
-                <li key={nombre}>
-                  <button
-                    type="button"
-                    onClick={() => seleccionarCliente(nombre)}
-                    className="flex w-full items-center gap-3 rounded-xl border border-foreground/10 bg-secondary px-4 py-3 text-left text-sm font-semibold transition hover:bg-muted"
-                  >
-                    <User className="size-5 shrink-0 text-primary" aria-hidden />
-                    <span className="min-w-0">{nombre}</span>
-                  </button>
-                </li>
-              ))
+              clientesFiltradosModal.map((nombre) => {
+                const seleccionado = nombreCliente === nombre
+                return (
+                  <li key={nombre}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={seleccionado}
+                      onClick={() => seleccionarCliente(nombre)}
+                      className={cn(
+                        "flex w-full items-center gap-3 text-left",
+                        modalOpcionBase,
+                        seleccionado
+                          ? modalOpcionSeleccionada
+                          : modalOpcionIdle,
+                      )}
+                    >
+                      <User className="size-5 shrink-0 text-primary" aria-hidden />
+                      <span className="min-w-0">{nombre}</span>
+                    </button>
+                  </li>
+                )
+              })
             )}
           </ul>
           {nombreCliente ? (
@@ -795,19 +1139,21 @@ export default function SalePage() {
                     role="option"
                     aria-selected={seleccionado}
                     onClick={() => setComprobante(c)}
-                    className={`w-full rounded-xl border px-4 py-3 text-left transition ${
+                    className={cn(
+                      "w-full text-left",
+                      modalOpcionBase,
                       seleccionado
-                        ? "border-primary/55 bg-primary/12 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.25)]"
-                        : "border-foreground/10 bg-secondary hover:bg-muted"
-                    }`}
+                        ? modalOpcionSeleccionada
+                        : modalOpcionIdle,
+                    )}
                   >
                     <span className="block text-sm font-semibold">{c}</span>
-                    {c === "Recibo X" ? (
-                      <span className="mt-1 block text-xs text-muted-foreground">
-                        No requiere ARCA
-                      </span>
-                    ) : null}
                   </button>
+                  {c === "Recibo X" ? (
+                    <p className="mt-1 px-1 text-xs text-muted-foreground">
+                      No requiere ARCA
+                    </p>
+                  ) : null}
                 </li>
               )
             })}
@@ -815,7 +1161,8 @@ export default function SalePage() {
           <DialogFooter className="gap-2 sm:justify-between">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
+              className="text-muted-foreground"
               onClick={() => {
                 setComprobante(null)
                 setComprobanteModalAbierto(false)
@@ -843,37 +1190,51 @@ export default function SalePage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <Button
+            <button
               type="button"
-              variant="outline"
-              className="h-12 w-full border-foreground/15"
+              className={cn(
+                "w-full text-left",
+                modalOpcionBase,
+                metodoPago === "Efectivo"
+                  ? modalOpcionSeleccionada
+                  : modalOpcionIdle,
+              )}
               onClick={() => {
                 setMetodoPago("Efectivo")
                 setPagoModalAbierto(false)
               }}
             >
               Efectivo
-            </Button>
+            </button>
             <Separator className="bg-border/80" />
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Débito
               </p>
-              <div className="flex flex-wrap gap-2">
-                {TARJETAS_DEBITO.map((t) => (
-                  <Button
-                    key={`deb-${t}`}
-                    type="button"
-                    variant="outline"
-                    className="min-w-26 border-foreground/15"
-                    onClick={() => {
-                      setMetodoPago(`Débito · ${t}`)
-                      setPagoModalAbierto(false)
-                    }}
-                  >
-                    {t}
-                  </Button>
-                ))}
+              <div className="grid grid-cols-2 gap-2">
+                {TARJETAS_DEBITO.map((t) => {
+                  const valor = `Débito · ${t}`
+                  const seleccionado = metodoPago === valor
+                  return (
+                    <button
+                      key={`deb-${t}`}
+                      type="button"
+                      className={cn(
+                        "min-w-0 px-4 py-3 text-center",
+                        modalOpcionBase,
+                        seleccionado
+                          ? modalOpcionSeleccionada
+                          : modalOpcionIdle,
+                      )}
+                      onClick={() => {
+                        setMetodoPago(valor)
+                        setPagoModalAbierto(false)
+                      }}
+                    >
+                      <span className="block w-full truncate">{t}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
             <Separator className="bg-border/80" />
@@ -881,25 +1242,34 @@ export default function SalePage() {
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Crédito
               </p>
-              <div className="flex flex-wrap gap-2">
-                {TARJETAS_CREDITO.map((t) => (
-                  <Button
-                    key={`cred-${t}`}
-                    type="button"
-                    variant="outline"
-                    className="min-w-26 border-foreground/15"
-                    onClick={() => {
-                      setMetodoPago(`Crédito · ${t}`)
-                      setPagoModalAbierto(false)
-                    }}
-                  >
-                    {t}
-                  </Button>
-                ))}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {TARJETAS_CREDITO.map((t) => {
+                  const valor = `Crédito · ${t}`
+                  const seleccionado = metodoPago === valor
+                  return (
+                    <button
+                      key={`cred-${t}`}
+                      type="button"
+                      className={cn(
+                        "min-w-0 px-4 py-3 text-center",
+                        modalOpcionBase,
+                        seleccionado
+                          ? modalOpcionSeleccionada
+                          : modalOpcionIdle,
+                      )}
+                      onClick={() => {
+                        setMetodoPago(valor)
+                        setPagoModalAbierto(false)
+                      }}
+                    >
+                      <span className="block w-full truncate">{t}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:justify-between">
             <Button
               type="button"
               variant="ghost"
@@ -909,7 +1279,14 @@ export default function SalePage() {
                 setPagoModalAbierto(false)
               }}
             >
-              Usar efectivo por defecto
+              Quitar selección
+            </Button>
+            <Button
+              type="button"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => setPagoModalAbierto(false)}
+            >
+              Listo
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -932,20 +1309,34 @@ export default function SalePage() {
             onValueChange={(v) =>
               setDescuentoDraftModo(v as "porcentaje" | "fijo")
             }
-            className="grid gap-3"
+            className="grid gap-2"
           >
-            <div className="flex items-center gap-3 rounded-lg border border-foreground/10 bg-secondary/80 px-3 py-2">
+            <label
+              htmlFor="desc-pct"
+              className={cn(
+                "flex w-full cursor-pointer items-center gap-3 text-left",
+                modalOpcionBase,
+                descuentoDraftModo === "porcentaje"
+                  ? modalOpcionSeleccionada
+                  : modalOpcionIdle,
+              )}
+            >
               <RadioGroupItem value="porcentaje" id="desc-pct" />
-              <Label htmlFor="desc-pct" className="cursor-pointer font-medium">
-                Porcentaje
-              </Label>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border border-foreground/10 bg-secondary/80 px-3 py-2">
+              <span className="font-semibold">Porcentaje</span>
+            </label>
+            <label
+              htmlFor="desc-fijo"
+              className={cn(
+                "flex w-full cursor-pointer items-center gap-3 text-left",
+                modalOpcionBase,
+                descuentoDraftModo === "fijo"
+                  ? modalOpcionSeleccionada
+                  : modalOpcionIdle,
+              )}
+            >
               <RadioGroupItem value="fijo" id="desc-fijo" />
-              <Label htmlFor="desc-fijo" className="cursor-pointer font-medium">
-                Monto fijo
-              </Label>
-            </div>
+              <span className="font-semibold">Monto fijo</span>
+            </label>
           </RadioGroup>
           <div className="space-y-2">
             <Label htmlFor="desc-valor">
@@ -980,8 +1371,13 @@ export default function SalePage() {
               </p>
             ) : null}
           </div>
-          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
-            <Button type="button" variant="ghost" onClick={quitarDescuento}>
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-muted-foreground"
+              onClick={quitarDescuento}
+            >
               Quitar descuento
             </Button>
             <Button
