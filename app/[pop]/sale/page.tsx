@@ -611,6 +611,19 @@ export default function SalePage() {
   const modalOpcionIdle =
     "border-foreground/10 bg-secondary hover:bg-muted"
 
+  const ventaDialogSurface =
+    "gap-0 overflow-hidden rounded-2xl border border-border/60 bg-card p-0 shadow-2xl ring-1 ring-black/[0.04] dark:ring-white/[0.06]"
+  const ventaDialogSurfaceMd = cn(ventaDialogSurface, "sm:max-w-md")
+  const ventaDialogSurfaceLg = cn(ventaDialogSurface, "sm:max-w-lg")
+  const ventaDialogHeader =
+    "space-y-1.5 border-b border-border/50 bg-muted/25 px-6 pb-4 pt-5 text-left"
+  const ventaDialogBody = "px-6 py-4"
+  const ventaDialogFooter =
+    "border-t border-border/50 bg-muted/15 px-6 py-3.5 sm:justify-between"
+  const ventaDialogPrimaryBtn =
+    "h-10 bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-500 active:bg-emerald-700"
+  const ventaDialogGhostBtn = "h-10 text-muted-foreground hover:text-foreground"
+
   return (
     <div className="relative h-screen overflow-hidden bg-[#070a09] text-white">
       <div className="pointer-events-none absolute inset-0">
@@ -1128,9 +1141,25 @@ export default function SalePage() {
             </div>
           </section>
 
-          <aside className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] bg-[#f3f5f7] text-[#121417]">
+          <aside
+            className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] bg-[#eef1f5] text-[#121417]"
+            aria-label="Carrito de la venta"
+          >
             <div className="flex min-h-0 flex-col">
-              <div className="game-scroll min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+              <div
+                className="game-scroll min-h-0 flex-1 space-y-2 overflow-y-auto p-3 sm:p-3.5"
+                role="region"
+                aria-label="Ítems agregados"
+              >
+                <div className="mb-1 flex items-baseline justify-between gap-2 px-0.5">
+                  <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    Tu pedido
+                  </h2>
+                  <span className="text-[11px] font-medium tabular-nums text-slate-400">
+                    {itemsDetallados.length}{" "}
+                    {itemsDetallados.length === 1 ? "línea" : "líneas"}
+                  </span>
+                </div>
                 {itemsDetallados.map((item) => {
                   const itemId = item.productoId
                   const abierto = itemDetalleAbiertoId === itemId
@@ -1144,102 +1173,143 @@ export default function SalePage() {
                   const precioBaseItem = (item.producto?.precio ?? 0) * item.cantidad
                   const tieneComentario = comentario.trim().length > 0
                   const tieneDescuento = descuento > 0
+                  const nombreProducto = item.producto?.nombre ?? "Producto"
 
                   return (
-                    <div key={itemId} className="space-y-1.5">
+                    <div key={itemId} className="space-y-2">
                       <div
-                        onClick={() => toggleItemDetalle(itemId)}
-                        className={cn(
-                          "cursor-pointer rounded-xl border bg-white px-3 py-2.5 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_8px_18px_rgba(15,23,42,0.06)]",
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={abierto}
+                        aria-controls={
+                          abierto ? `cart-item-${itemId}-opciones` : undefined
+                        }
+                        aria-label={
                           abierto
-                            ? "border-2 border-[#7d8fa3]"
-                            : "border border-[#dce3eb]",
+                            ? `${nombreProducto}, ${item.cantidad} unidades. Opciones visibles. Clic para cerrar.`
+                            : `${nombreProducto}, ${item.cantidad} unidades. Clic para descuento y comentario.`
+                        }
+                        onClick={() => toggleItemDetalle(itemId)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault()
+                            toggleItemDetalle(itemId)
+                          }
+                        }}
+                        className={cn(
+                          "cursor-pointer rounded-xl border bg-white px-3 py-2.5 text-left shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_4px_14px_rgba(15,23,42,0.05)] transition-[border-color,box-shadow] duration-150",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#eef1f5]",
+                          abierto
+                            ? "border-slate-300 ring-1 ring-slate-300/60 shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_6px_20px_rgba(15,23,42,0.07)]"
+                            : "border-slate-200/90 hover:border-slate-300 hover:shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_6px_18px_rgba(15,23,42,0.06)]",
                         )}
                       >
-                        <div className="grid grid-cols-[56px_minmax(0,1fr)_90px_28px] items-center gap-2">
-                        <div className="flex items-center gap-1 rounded-lg bg-white px-1 py-1 ring-1 ring-[#d5dbe2]">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              cambiarCantidad(itemId, -1)
-                            }}
-                            className="inline-flex size-5 items-center justify-center rounded bg-[#eef2f6] text-[#324255] hover:bg-[#dfe6ee]"
+                        <div className="grid grid-cols-[56px_minmax(0,1fr)_minmax(4.5rem,auto)_2rem] items-center gap-2 sm:grid-cols-[56px_minmax(0,1fr)_5.5rem_2rem]">
+                          <div
+                            className="flex items-center gap-0.5 rounded-lg bg-slate-50 px-1 py-1 ring-1 ring-slate-200/90"
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                            role="group"
+                            aria-label={`Cantidad de ${nombreProducto}`}
                           >
-                            <Minus className="size-3" />
-                          </button>
-                          <span className="w-4 text-center text-sm font-bold text-[#1d232b]">
-                            {item.cantidad}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              cambiarCantidad(itemId, 1)
-                            }}
-                            className="inline-flex size-5 items-center justify-center rounded bg-[#eef2f6] text-[#324255] hover:bg-[#dfe6ee]"
-                          >
-                            <Plus className="size-3" />
-                          </button>
-                        </div>
-                        <div className="min-w-0">
-                          <CartItemTitleMarquee
-                            text={item.producto?.nombre ?? ""}
-                            active={abierto}
-                            className="text-sm font-semibold text-[#151a20]"
-                          />
-                          <div className="mt-0.5 flex min-w-0 items-center gap-1">
-                            <div className="min-w-0 flex-1">
-                              <p className="line-clamp-1 text-xs text-[#5d6978]">
-                                {item.producto?.descripcion}
-                              </p>
-                            </div>
-                            {tieneComentario ? (
-                              <span className="inline-flex shrink-0 items-center rounded-full border border-sky-200 bg-sky-50 px-1.5 py-0 text-[10px] font-semibold text-sky-700">
-                                C
-                              </span>
-                            ) : null}
-                            {tieneDescuento ? (
-                              <span className="inline-flex max-w-22 shrink-0 items-center justify-center truncate rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0 text-[10px] font-semibold text-emerald-700 tabular-nums">
-                                {modoItemDescuento === "porcentaje"
-                                  ? `${Math.min(100, Math.max(0, Number.isFinite(descuentoNumero) ? descuentoNumero : 0))}%`
-                                  : fmt.format(descuento)}
-                              </span>
-                            ) : null}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                cambiarCantidad(itemId, -1)
+                              }}
+                              aria-label={`Quitar una unidad de ${nombreProducto}`}
+                              className="inline-flex size-6 items-center justify-center rounded-md bg-white text-slate-600 shadow-sm ring-1 ring-slate-200/80 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+                            >
+                              <Minus className="size-3" aria-hidden />
+                            </button>
+                            <span className="min-w-5 text-center text-sm font-bold tabular-nums text-slate-900">
+                              {item.cantidad}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                cambiarCantidad(itemId, 1)
+                              }}
+                              aria-label={`Agregar una unidad de ${nombreProducto}`}
+                              className="inline-flex size-6 items-center justify-center rounded-md bg-white text-slate-600 shadow-sm ring-1 ring-slate-200/80 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+                            >
+                              <Plus className="size-3" aria-hidden />
+                            </button>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          {tieneDescuento ? (
-                            <p className="text-[11px] text-[#7a8796] line-through">
-                              {fmt.format(precioBaseItem)}
+                          <div className="min-w-0">
+                            <CartItemTitleMarquee
+                              text={nombreProducto}
+                              active={abierto}
+                              className="text-sm font-semibold text-slate-900"
+                            />
+                            <div className="mt-0.5 flex min-w-0 items-center gap-1">
+                              <div className="min-w-0 flex-1">
+                                <p className="line-clamp-1 text-xs text-slate-500">
+                                  {item.producto?.descripcion}
+                                </p>
+                              </div>
+                              {tieneComentario ? (
+                                <span
+                                  className="inline-flex shrink-0 items-center rounded-full border border-sky-200 bg-sky-50 px-1.5 py-0 text-[10px] font-semibold text-sky-800"
+                                  title="Tiene comentario para cocina"
+                                >
+                                  <span className="sr-only">Comentario</span>
+                                  <MessageSquare
+                                    className="size-3 sm:hidden"
+                                    aria-hidden
+                                  />
+                                  <span aria-hidden className="hidden sm:inline">
+                                    Nota
+                                  </span>
+                                </span>
+                              ) : null}
+                              {tieneDescuento ? (
+                                <span className="inline-flex max-w-22 shrink-0 items-center justify-center truncate rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0 text-[10px] font-semibold text-emerald-800 tabular-nums">
+                                  {modoItemDescuento === "porcentaje"
+                                    ? `${Math.min(100, Math.max(0, Number.isFinite(descuentoNumero) ? descuentoNumero : 0))}%`
+                                    : fmt.format(descuento)}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            {tieneDescuento ? (
+                              <p className="text-[11px] tabular-nums text-slate-400 line-through">
+                                {fmt.format(precioBaseItem)}
+                              </p>
+                            ) : null}
+                            <p className="text-sm font-bold tabular-nums text-slate-900">
+                              {fmt.format(precioBaseItem - descuento)}
                             </p>
-                          ) : null}
-                          <p className="text-sm font-bold text-[#151a20]">
-                            {fmt.format(precioBaseItem - descuento)}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            quitarDelCarrito(itemId)
-                          }}
-                          className="inline-flex size-7 items-center justify-center rounded text-[#7a8796] hover:bg-[#e5ebf2] hover:text-[#1f2a36]"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              quitarDelCarrito(itemId)
+                            }}
+                            aria-label={`Quitar ${nombreProducto} del carrito`}
+                            className="inline-flex size-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/50"
+                          >
+                            <Trash2 className="size-4" aria-hidden />
+                          </button>
                         </div>
                       </div>
 
                       {abierto ? (
                         <div
+                          id={`cart-item-${itemId}-opciones`}
+                          role="region"
+                          aria-label={`Opciones de ${nombreProducto}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="rounded-lg border border-slate-300/90 bg-slate-200/90 px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+                          className="rounded-xl border border-slate-200/95 bg-white px-2.5 py-2 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_4px_16px_rgba(15,23,42,0.06)]"
                         >
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-400/50 bg-slate-100 text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-400/50 bg-slate-100 text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50"
                               aria-label="Cambiar tipo de descuento"
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -1253,9 +1323,9 @@ export default function SalePage() {
                               }}
                             >
                               {modoItemDescuento === "porcentaje" ? (
-                                <Percent className="size-3.5" />
+                                <Percent className="size-3.5" aria-hidden />
                               ) : (
-                                <Banknote className="size-3.5" />
+                                <Banknote className="size-3.5" aria-hidden />
                               )}
                             </button>
                             <Input
@@ -1419,64 +1489,68 @@ export default function SalePage() {
           if (open) setBusquedaClienteModal("")
         }}
       >
-        <DialogContent className="border-border/80 bg-card text-foreground sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Cliente para esta venta</DialogTitle>
-            <DialogDescription className="sr-only">
+        <DialogContent className={cn(ventaDialogSurfaceMd, "text-foreground")}>
+          <DialogHeader className={ventaDialogHeader}>
+            <DialogTitle className="text-base font-semibold tracking-tight">
+              Cliente para esta venta
+            </DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
               Buscá por nombre o elegí un cliente de la lista.
             </DialogDescription>
           </DialogHeader>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={busquedaClienteModal}
-              onChange={(e) => setBusquedaClienteModal(e.target.value)}
-              placeholder="Buscar cliente..."
-              className="pl-9"
-              autoComplete="off"
-            />
+          <div className={ventaDialogBody}>
+            <div className="relative mb-3">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={busquedaClienteModal}
+                onChange={(e) => setBusquedaClienteModal(e.target.value)}
+                placeholder="Nombre del cliente…"
+                className="h-11 rounded-lg pl-9"
+                autoComplete="off"
+              />
+            </div>
+            <ul
+              className="game-scroll max-h-[min(50vh,16rem)] space-y-2 overflow-y-auto rounded-xl border border-border/40 bg-muted/20 p-2 pr-1"
+              role="listbox"
+              aria-label="Clientes"
+            >
+              {clientesFiltradosModal.length === 0 ? (
+                <li className="rounded-lg border border-dashed border-border/60 bg-background/50 px-4 py-8 text-center text-sm text-muted-foreground">
+                  No hay resultados para esa búsqueda.
+                </li>
+              ) : (
+                clientesFiltradosModal.map((nombre) => {
+                  const seleccionado = nombreCliente === nombre
+                  return (
+                    <li key={nombre}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={seleccionado}
+                        onClick={() => seleccionarCliente(nombre)}
+                        className={cn(
+                          "flex min-h-11 w-full items-center gap-3 text-left",
+                          modalOpcionBase,
+                          seleccionado
+                            ? modalOpcionSeleccionada
+                            : modalOpcionIdle,
+                        )}
+                      >
+                        <User className="size-5 shrink-0 text-primary" aria-hidden />
+                        <span className="min-w-0 font-medium">{nombre}</span>
+                      </button>
+                    </li>
+                  )
+                })
+              )}
+            </ul>
           </div>
-          <ul
-            className="game-scroll max-h-60 space-y-2 overflow-y-auto pr-1"
-            role="listbox"
-            aria-label="Clientes"
-          >
-            {clientesFiltradosModal.length === 0 ? (
-              <li className="rounded-lg border border-dashed border-foreground/15 px-3 py-6 text-center text-sm text-muted-foreground">
-                No hay resultados para esa búsqueda.
-              </li>
-            ) : (
-              clientesFiltradosModal.map((nombre) => {
-                const seleccionado = nombreCliente === nombre
-                return (
-                  <li key={nombre}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={seleccionado}
-                      onClick={() => seleccionarCliente(nombre)}
-                      className={cn(
-                        "flex w-full items-center gap-3 text-left",
-                        modalOpcionBase,
-                        seleccionado
-                          ? modalOpcionSeleccionada
-                          : modalOpcionIdle,
-                      )}
-                    >
-                      <User className="size-5 shrink-0 text-primary" aria-hidden />
-                      <span className="min-w-0">{nombre}</span>
-                    </button>
-                  </li>
-                )
-              })
-            )}
-          </ul>
           {nombreCliente ? (
-            <DialogFooter className="sm:justify-between">
+            <DialogFooter className={ventaDialogFooter}>
               <Button
                 type="button"
                 variant="ghost"
-                className="text-muted-foreground"
+                className={ventaDialogGhostBtn}
                 onClick={() => {
                   setNombreCliente(null)
                   setClienteModalAbierto(false)
@@ -1493,51 +1567,55 @@ export default function SalePage() {
         open={comprobanteModalAbierto}
         onOpenChange={setComprobanteModalAbierto}
       >
-        <DialogContent className="border-border/80 bg-card text-foreground sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Tipo de comprobante</DialogTitle>
-            <DialogDescription>
+        <DialogContent className={cn(ventaDialogSurfaceMd, "text-foreground")}>
+          <DialogHeader className={ventaDialogHeader}>
+            <DialogTitle className="text-base font-semibold tracking-tight">
+              Tipo de comprobante
+            </DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
               Seleccioná el comprobante que vas a emitir en esta venta.
             </DialogDescription>
           </DialogHeader>
-          <ul
-            className="grid gap-2"
-            role="listbox"
-            aria-label="Tipos de comprobante"
-          >
-            {COMPROBANTES_OPCIONES.map((c) => {
-              const seleccionado = comprobante === c
-              return (
-                <li key={c}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={seleccionado}
-                    onClick={() => setComprobante(c)}
-                    className={cn(
-                      "w-full text-left",
-                      modalOpcionBase,
-                      seleccionado
-                        ? modalOpcionSeleccionada
-                        : modalOpcionIdle,
-                    )}
-                  >
-                    <span className="block text-sm font-semibold">{c}</span>
-                  </button>
-                  {c === "Recibo X" ? (
-                    <p className="mt-1 px-1 text-xs text-muted-foreground">
-                      No requiere ARCA
-                    </p>
-                  ) : null}
-                </li>
-              )
-            })}
-          </ul>
-          <DialogFooter className="gap-2 sm:justify-between">
+          <div className={ventaDialogBody}>
+            <ul
+              className="grid gap-2"
+              role="listbox"
+              aria-label="Tipos de comprobante"
+            >
+              {COMPROBANTES_OPCIONES.map((c) => {
+                const seleccionado = comprobante === c
+                return (
+                  <li key={c}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={seleccionado}
+                      onClick={() => setComprobante(c)}
+                      className={cn(
+                        "min-h-11 w-full text-left",
+                        modalOpcionBase,
+                        seleccionado
+                          ? modalOpcionSeleccionada
+                          : modalOpcionIdle,
+                      )}
+                    >
+                      <span className="block text-sm font-semibold">{c}</span>
+                    </button>
+                    {c === "Recibo X" ? (
+                      <p className="mt-1.5 px-1 text-xs leading-snug text-muted-foreground">
+                        No requiere ARCA
+                      </p>
+                    ) : null}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+          <DialogFooter className={ventaDialogFooter}>
             <Button
               type="button"
               variant="ghost"
-              className="text-muted-foreground"
+              className={ventaDialogGhostBtn}
               onClick={() => {
                 setComprobante(null)
                 setComprobanteModalAbierto(false)
@@ -1547,7 +1625,7 @@ export default function SalePage() {
             </Button>
             <Button
               type="button"
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              className={ventaDialogPrimaryBtn}
               onClick={() => setComprobanteModalAbierto(false)}
             >
               Listo
@@ -1557,18 +1635,20 @@ export default function SalePage() {
       </Dialog>
 
       <Dialog open={pagoModalAbierto} onOpenChange={setPagoModalAbierto}>
-        <DialogContent className="border-border/80 bg-card text-foreground sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Método de pago</DialogTitle>
-            <DialogDescription>
-              Elegí forma de pago: efectivo o tarjetas por débito y crédito.
+        <DialogContent className={cn(ventaDialogSurfaceLg, "text-foreground")}>
+          <DialogHeader className={ventaDialogHeader}>
+            <DialogTitle className="text-base font-semibold tracking-tight">
+              Método de pago
+            </DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
+              Elegí efectivo o una tarjeta por débito o crédito.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className={cn(ventaDialogBody, "max-h-[min(70vh,28rem)] space-y-4 overflow-y-auto")}>
             <button
               type="button"
               className={cn(
-                "w-full text-left",
+                "min-h-11 w-full text-left font-semibold",
                 modalOpcionBase,
                 metodoPago === "Efectivo"
                   ? modalOpcionSeleccionada
@@ -1581,9 +1661,9 @@ export default function SalePage() {
             >
               Efectivo
             </button>
-            <Separator className="bg-border/80" />
+            <Separator className="bg-border/60" />
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Débito
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -1595,7 +1675,7 @@ export default function SalePage() {
                       key={`deb-${t}`}
                       type="button"
                       className={cn(
-                        "min-w-0 px-4 py-3 text-center",
+                        "min-h-11 min-w-0 px-3 py-2.5 text-center text-sm font-medium",
                         modalOpcionBase,
                         seleccionado
                           ? modalOpcionSeleccionada
@@ -1612,9 +1692,9 @@ export default function SalePage() {
                 })}
               </div>
             </div>
-            <Separator className="bg-border/80" />
+            <Separator className="bg-border/60" />
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Crédito
               </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -1626,7 +1706,7 @@ export default function SalePage() {
                       key={`cred-${t}`}
                       type="button"
                       className={cn(
-                        "min-w-0 px-4 py-3 text-center",
+                        "min-h-11 min-w-0 px-3 py-2.5 text-center text-sm font-medium",
                         modalOpcionBase,
                         seleccionado
                           ? modalOpcionSeleccionada
@@ -1644,11 +1724,11 @@ export default function SalePage() {
               </div>
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:justify-between">
+          <DialogFooter className={ventaDialogFooter}>
             <Button
               type="button"
               variant="ghost"
-              className="text-muted-foreground"
+              className={ventaDialogGhostBtn}
               onClick={() => {
                 setMetodoPago(null)
                 setPagoModalAbierto(false)
@@ -1658,7 +1738,7 @@ export default function SalePage() {
             </Button>
             <Button
               type="button"
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              className={ventaDialogPrimaryBtn}
               onClick={() => setPagoModalAbierto(false)}
             >
               Listo
@@ -1671,21 +1751,25 @@ export default function SalePage() {
         open={descuentoModalAbierto}
         onOpenChange={setDescuentoModalAbierto}
       >
-        <DialogContent className="border-border/80 bg-card text-foreground sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Descuento</DialogTitle>
-            <DialogDescription>
-              Elegí % o monto fijo con el interruptor y escribí el valor. Se
-              aplica sobre el subtotal de la venta (después de descuentos por
-              ítem).
+        <DialogContent className={cn(ventaDialogSurfaceMd, "text-foreground")}>
+          <DialogHeader className={ventaDialogHeader}>
+            <DialogTitle className="text-base font-semibold tracking-tight">
+              Descuento en la venta
+            </DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
+              Alterná % o monto fijo con el botón e ingresá el valor. Se aplica
+              sobre el subtotal (después de descuentos por ítem).
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
+          <div className={ventaDialogBody}>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Valor
+            </p>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 className={cn(
-                  "inline-flex size-10 shrink-0 items-center justify-center rounded-xl border text-foreground/80 transition",
+                  "inline-flex size-11 shrink-0 items-center justify-center rounded-xl border text-foreground/80 transition",
                   "border-foreground/10 bg-muted/50 hover:bg-muted hover:text-foreground",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                 )}
@@ -1731,33 +1815,33 @@ export default function SalePage() {
                 inputMode="numeric"
                 pattern="[0-9]*"
                 autoComplete="off"
-                className="h-10 min-w-0 flex-1"
+                className="h-11 min-w-0 flex-1 rounded-lg"
               />
             </div>
             {descuentoDraftModo === "fijo" && subtotal > 0 ? (
-              <p className="text-xs text-muted-foreground">
+              <p className="mt-3 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
                 Máximo aplicable: {fmt.format(subtotal)}. Si superás ese monto,
                 pasa a 100 %.
               </p>
             ) : null}
             {descuentoDraftModo === "fijo" && subtotal === 0 ? (
-              <p className="text-xs text-muted-foreground">
+              <p className="mt-3 rounded-lg border border-dashed border-border/60 bg-muted/20 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
                 No hay subtotal: agregá productos para aplicar un monto fijo.
               </p>
             ) : null}
           </div>
-          <DialogFooter className="gap-2 sm:justify-between">
+          <DialogFooter className={ventaDialogFooter}>
             <Button
               type="button"
               variant="ghost"
-              className="text-muted-foreground"
+              className={ventaDialogGhostBtn}
               onClick={quitarDescuento}
             >
               Quitar descuento
             </Button>
             <Button
               type="button"
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              className={ventaDialogPrimaryBtn}
               onClick={aplicarDescuentoModal}
             >
               Aplicar
