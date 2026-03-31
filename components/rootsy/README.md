@@ -1,3 +1,4 @@
-Componentes compuestos del design system Rootsy (shell tipo PS5, bloques reutilizables).
+Piezas compuestas del design system Rootsy.
 
-Lineamientos y tokens: `docs/design-system.md`. Cuando haya varios exports públicos, sumá un `index.ts` en esta carpeta.
+- Lineamientos: `docs/design-system.md`
+- Exports: `index.ts`

@@ -106,7 +106,20 @@ Extraer **cuando** haya segunda pantalla que lo necesite, para no abstraer demas
 
 | Componente | Archivo | Uso |
 |------------|---------|-----|
-| — | — | Completar al crear cada pieza en `components/rootsy/`. |
+| `LandingHeroParkBackdrop` | `components/rootsy/landing-hero-park-backdrop.tsx` | Fondo **parque nocturno** a pantalla completa: gradientes, bruma inferior, **degradado al token** `rootsy-section-alt` para fundir con la siguiente sección, pulso ambiental, partículas y glow al cursor; opcional foto vía env. `.rootsy-ambient-pulse` en `app/globals.css`. |
+
+### Hero landing — imagen de parque opcional
+
+Sin variable de entorno, el fondo es **100% CSS** (coherente con el shell oscuro). Si querés una foto o ilustración:
+
+1. Sumá el archivo a `public/` (ideal **ancha**, ≥1920px, formato **WebP** o **AVIF**, peso contenido).
+2. Definí en `.env.local`:
+
+   `NEXT_PUBLIC_LANDING_HERO_BG=/nombre-de-tu-archivo.webp`
+
+   (también puede ser URL absoluta si está permitida en `next.config` para `images`.)
+
+La imagen se dibuja **debajo** de las capas de tinte y viñeta para mantener legibilidad del título y los CTA.
 
 ---
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import useEmblaCarousel from 'embla-carousel-react'
 import {
   Search,
@@ -101,6 +102,7 @@ const dockItems = [
 type SectionKey = keyof typeof menuSections
 
 export default function MenuPage() {
+  const router = useRouter()
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [searchQuery, setSearchQuery] = useState("")
   const [showSearch, setShowSearch] = useState(false)
@@ -333,7 +335,7 @@ export default function MenuPage() {
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center pb-28 pt-4">
         <div className="flex flex-col items-center w-full">
           {/* Section Tabs */}
-          <div className="mb-4 flex w-48 items-center justify-between rounded-xl border border-border bg-muted px-4 py-2.5 backdrop-blur-xl">
+          <div className="mb-[32px] flex w-48 items-center justify-between rounded-xl border border-border bg-muted px-4 py-2.5 backdrop-blur-xl">
             <span className="text-sm font-bold tracking-wide text-foreground">
               {currentSection.title}
             </span>
@@ -367,6 +369,9 @@ export default function MenuPage() {
                         return (
                           <button
                             key={item.name}
+                            onClick={() => {
+                              if (item.name === "Vender") router.push("/1/sale")
+                            }}
                             className="group flex flex-col items-center justify-self-center gap-2.5 w-24 transition-all duration-200 hover:scale-105 active:scale-95"
                           >
                             <div className="relative">
@@ -421,7 +426,7 @@ export default function MenuPage() {
                   <Icon className="relative h-6 w-6 text-white drop-shadow-sm" />
                 </div>
 
-                <div className="pointer-events-none absolute -top-8 left-1/2 z-10 scale-90 whitespace-nowrap rounded-md bg-black/80 px-2 py-1 text-[10px] font-medium text-white opacity-0 backdrop-blur-sm transition-all group-hover:scale-100 group-hover:opacity-100">
+                <div className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 scale-90 whitespace-nowrap rounded-md bg-black/80 px-2 py-1 text-[10px] font-medium text-white opacity-0 backdrop-blur-sm transition-all group-hover:scale-100 group-hover:opacity-100">
                   {item.name}
                 </div>
               </button>

@@ -123,3 +123,32 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .rootsy-scroll-subtle {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.32) transparent;
+  }
+
+  .rootsy-scroll-subtle::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+
+  .rootsy-scroll-subtle::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .rootsy-scroll-subtle::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.34);
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .rootsy-scroll-subtle::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
+    border: 1px solid transparent;
+    background-clip: padding-box;
+  }
+}
