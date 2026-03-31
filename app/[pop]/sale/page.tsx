@@ -701,65 +701,92 @@ export default function SalePage() {
         <main className="grid min-h-0 grid-cols-[minmax(0,1fr)_380px]">
           <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_4.5rem]">
             <div className="grid min-h-0 grid-cols-[280px_minmax(0,1fr)]">
-              <aside className="border-r border-white/10 bg-[#1a2027] px-4 py-4">
-                <div className="overflow-hidden rounded-lg border border-white/10">
-                  {CATEGORIAS.map((cat) => {
-                    const seleccionado =
-                      vistaCatalogo.modo === "categoria" &&
-                      vistaCatalogo.categoria === cat
-                    return (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() =>
-                          setVistaCatalogo({ modo: "categoria", categoria: cat })
-                        }
-                        className={`flex h-12 w-full items-center border-b border-white/8 px-3 text-left text-sm font-semibold transition last:border-b-0 ${
-                          seleccionado
-                            ? "bg-slate-100/14 text-white"
-                            : "text-slate-300/80 hover:bg-white/8 hover:text-white"
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    )
-                  })}
-                </div>
+              <aside className="flex min-h-0 min-w-0 flex-col border-r border-white/10 bg-[#1a2027]">
+                <nav
+                  className="game-scroll flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-3 py-4"
+                  aria-label="Filtros del catálogo"
+                >
+                  <div>
+                    <p className="mb-2.5 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Categorías
+                    </p>
+                    <ul className="flex flex-col gap-0.5 p-0" role="list">
+                      {CATEGORIAS.map((cat) => {
+                        const seleccionado =
+                          vistaCatalogo.modo === "categoria" &&
+                          vistaCatalogo.categoria === cat
+                        return (
+                          <li key={cat}>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setVistaCatalogo({
+                                  modo: "categoria",
+                                  categoria: cat,
+                                })
+                              }
+                              className={cn(
+                                "relative flex min-h-11 w-full items-center rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors duration-150",
+                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a2027]",
+                                seleccionado
+                                  ? "bg-white/10 text-white before:absolute before:top-1/2 before:left-0 before:h-5 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-emerald-400 before:content-['']"
+                                  : "text-slate-400 hover:bg-white/6 hover:text-slate-100",
+                              )}
+                            >
+                              {cat}
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
 
-                <div className="mt-3 space-y-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    aria-pressed={vistaCatalogo.modo === "promociones"}
-                    onClick={() => setVistaCatalogo({ modo: "promociones" })}
-                    className={cn(
-                      "h-10 w-full rounded-lg text-sm font-medium shadow-none",
-                      vistaCatalogo.modo === "promociones"
-                        ? "border-2 border-emerald-500/55 bg-emerald-500/8 text-emerald-100 hover:border-emerald-400/65 hover:bg-emerald-500/12 hover:text-emerald-50"
-                        : "border border-white/10 bg-white/3 text-slate-400 hover:border-emerald-600/35 hover:bg-white/6 hover:text-slate-200",
-                    )}
-                  >
-                    <Tag className="size-3.5 opacity-90" aria-hidden />
-                    Promociones
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    aria-pressed={vistaCatalogo.modo === "con_descuento"}
-                    onClick={() =>
-                      setVistaCatalogo({ modo: "con_descuento" })
-                    }
-                    className={cn(
-                      "h-10 w-full rounded-lg text-sm font-medium shadow-none",
-                      vistaCatalogo.modo === "con_descuento"
-                        ? "border-2 border-amber-500/55 bg-amber-500/8 text-amber-100 hover:border-amber-400/65 hover:bg-amber-500/12 hover:text-amber-50"
-                        : "border border-white/10 bg-white/3 text-slate-400 hover:border-amber-600/35 hover:bg-white/6 hover:text-slate-200",
-                    )}
-                  >
-                    <Percent className="size-3.5 opacity-90" aria-hidden />
-                    Con descuento
-                  </Button>
-                </div>
+                  <div>
+                    <p className="mb-2.5 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Listados rápidos
+                    </p>
+                    <ul className="flex flex-col gap-0.5 p-0" role="list">
+                      <li>
+                        <button
+                          type="button"
+                          aria-pressed={vistaCatalogo.modo === "promociones"}
+                          onClick={() =>
+                            setVistaCatalogo({ modo: "promociones" })
+                          }
+                          className={cn(
+                            "relative flex min-h-11 w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors duration-150",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a2027]",
+                            vistaCatalogo.modo === "promociones"
+                              ? "bg-emerald-500/12 text-emerald-100 before:absolute before:top-1/2 before:left-0 before:h-5 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-emerald-400 before:content-['']"
+                              : "text-slate-400 hover:bg-white/6 hover:text-slate-100",
+                          )}
+                        >
+                          <Tag className="size-4 shrink-0 opacity-80" aria-hidden />
+                          Promociones
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          type="button"
+                          aria-pressed={vistaCatalogo.modo === "con_descuento"}
+                          onClick={() =>
+                            setVistaCatalogo({ modo: "con_descuento" })
+                          }
+                          className={cn(
+                            "relative flex min-h-11 w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors duration-150",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a2027]",
+                            vistaCatalogo.modo === "con_descuento"
+                              ? "bg-amber-500/12 text-amber-100 before:absolute before:top-1/2 before:left-0 before:h-5 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-amber-400 before:content-['']"
+                              : "text-slate-400 hover:bg-white/6 hover:text-slate-100",
+                          )}
+                        >
+                          <Percent className="size-4 shrink-0 opacity-80" aria-hidden />
+                          Con descuento
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </nav>
               </aside>
 
               <section className="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] bg-[#20262e]">
@@ -1219,21 +1246,20 @@ export default function SalePage() {
 
             <div className="flex min-h-0 flex-col">
               <div className="border-t border-[#d9dee4] bg-[#f8fafc] p-3 text-[#121417]">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <Button
                     type="button"
-                    variant="ghost"
-                    className="h-11 gap-2 border border-[#b91c1c]/40 bg-white text-[#b91c1c] shadow-sm hover:border-[#9f1239]/55 hover:bg-[#fff1f2] hover:text-[#9f1239] dark:border-[#b91c1c]/40 dark:bg-white dark:text-[#b91c1c] dark:hover:border-[#9f1239]/55 dark:hover:bg-[#fff1f2] dark:hover:text-[#9f1239]"
+                    variant="outline"
+                    className="h-11 gap-2 border-rose-200/90 bg-white font-medium text-rose-700 shadow-none hover:border-rose-300 hover:bg-rose-50 hover:text-rose-800 focus-visible:ring-2 focus-visible:ring-rose-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f8fafc]"
                   >
                     <CircleX className="size-4 shrink-0" aria-hidden />
                     Descartar
                   </Button>
                   <Button
                     type="button"
-                    variant="ghost"
-                    className="h-11 gap-2 border border-emerald-600/45 bg-white text-emerald-700 shadow-sm hover:border-emerald-700/60 hover:bg-emerald-50 hover:text-emerald-800 dark:border-emerald-600/45 dark:bg-white dark:text-emerald-700 dark:hover:border-emerald-700/60 dark:hover:bg-emerald-50 dark:hover:text-emerald-800"
+                    className="h-11 gap-2 border-0 bg-emerald-600 font-semibold text-white shadow-[0_1px_2px_rgba(0,0,0,0.06)] hover:bg-emerald-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f8fafc] active:bg-emerald-700"
                   >
-                    <CircleCheck className="size-4 shrink-0" aria-hidden />
+                    <CircleCheck className="size-4 shrink-0 opacity-95" aria-hidden />
                     Vender
                   </Button>
                 </div>
