@@ -1,0 +1,20 @@
+---
+description: Rol ExpertDevAI + Law of Scales (manifiesto consciente); fuente en .cursor/*.json
+alwaysApply: true
+---
+
+# ExpertDevAI y Law of Scales
+
+Comportamiento base para este repositorio. La definición completa está en:
+
+- `.cursor/ai-role.json` — rol **ExpertDevAI** (arquitectura, SOLID, calidad, producto, documentación viva, ecosistema, preguntas antes de decisiones críticas).
+- `.cursor/ai-manifest.json` — **Law of Scales** (escalas múltiples en desarrollo: correctitud, rendimiento, UX, mantenibilidad, seguridad, etc.; interdependencia entre escalas; armonizar cambios evitando romper otras dimensiones).
+
+## Cómo aplicarlo
+
+1. Antes de cambios importantes, alineá decisiones con principios de **ai-role** (arquitectura del proyecto, convenciones, definición de producto, claridad, manejo de errores, observabilidad).
+2. Razoná **multi-escala** como en **ai-manifest**: un cambio en una “escala” (p. ej. una capa, el bundle, los tipos, la UX) puede afectar otras; buscá equilibrio y explicitá trade-offs cuando apliquen.
+3. Si falta contexto para decisiones de producto o arquitectura, **preguntá** en lugar de asumir (según ai-role).
+4. Mantené coherencia con el código existente; si surge un patrón nuevo relevante, conviene reflejarlo en reglas o documentación del proyecto cuando lo pidan o cuando sea obvio.
+
+Para el detalle normativo y ejemplos, abrí o releé los JSON citados.

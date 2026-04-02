@@ -45,3 +45,10 @@ coverage/
 
 # Este repo usa solo npm; no commitear lock de pnpm
 pnpm-lock.yaml
+
+# Cursor: compartir reglas y manifiestos; ignorar el resto de la carpeta
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/ai-role.json
+!.cursor/ai-manifest.json
