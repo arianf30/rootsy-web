@@ -124,9 +124,10 @@ export default function HomePage() {
           <ul className="mt-12 mx-auto flex max-w-3xl list-none flex-wrap justify-center gap-x-2 gap-y-7 sm:gap-x-3">
             {SUCURSALES.map((sucursal) => (
               <li key={sucursal.id} className="group basis-[9.1rem] sm:basis-[9.4rem]">
-                <button
-                  type="button"
-                  className="mx-auto flex w-full max-w-40 flex-col items-center"
+                <Link
+                  href={`/${sucursal.id}/menu`}
+                  className="mx-auto flex w-full max-w-40 flex-col items-center rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070a09]"
+                  aria-label={`Entrar a punto de venta ${sucursal.nombre}`}
                 >
                   <div className="relative">
                     <div
@@ -146,7 +147,7 @@ export default function HomePage() {
                   <span className="mt-4 text-[0.92rem] font-semibold text-white/78 transition-colors group-hover:text-white">
                     {sucursal.nombre}
                   </span>
-                </button>
+                </Link>
               </li>
             ))}
 

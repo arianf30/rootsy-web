@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import Link from "next/link"
+import { useParams } from "next/navigation"
 import {
   useCallback,
   useEffect,
@@ -12,16 +12,12 @@ import {
   type CSSProperties,
 } from "react"
 import {
-  ArrowLeft,
   Banknote,
   CircleCheck,
   CircleX,
   LayoutGrid,
-  Maximize2,
-  Minimize2,
   Minus,
   MessageSquare,
-  MoreVertical,
   Percent,
   Plus,
   Receipt,
@@ -30,11 +26,9 @@ import {
   Tag,
   Trash2,
   User,
-  Wifi,
-  WifiOff,
 } from "lucide-react"
+import { PopSaleHeader } from "@/components/pop/pop-sale-header"
 import { cn } from "@/lib/utils"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -341,6 +335,14 @@ function CartItemTitleMarquee({
 }
 
 export default function SalePage() {
+  const params = useParams()
+  const popSlug =
+    typeof params?.pop === "string"
+      ? params.pop
+      : Array.isArray(params?.pop)
+        ? params.pop[0] ?? "1"
+        : "1"
+
   const [vistaCatalogo, setVistaCatalogo] = useState<VistaCatalogo>({
     modo: "categoria",
     categoria: "Principales",
@@ -647,97 +649,20 @@ export default function SalePage() {
       </div>
 
       <div className="relative z-10 grid h-full grid-rows-[4.5rem_minmax(0,1fr)]">
-        <header className="border-b border-rootsy-hairline bg-card/98 backdrop-blur-2xl">
-          <div className="grid h-18 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 px-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <Link
-                href="/1/menu"
-                className="group inline-flex size-10 items-center justify-center rounded-xl border border-foreground/6 bg-secondary text-foreground/70 transition-all hover:border-foreground/12 hover:bg-muted hover:text-foreground"
-                aria-label="Volver"
-              >
-                <ArrowLeft className="size-5 transition-transform group-hover:-translate-x-0.5" />
-              </Link>
-              <div className="h-6 w-px bg-border" />
-              <div className="flex min-w-0 items-center gap-2.5">
-                <div className="size-8 overflow-hidden rounded-lg ring-1 ring-border">
-                  <img
-                    src="https://api.dicebear.com/7.x/shapes/svg?seed=store1&backgroundColor=1a1f1d"
-                    alt="Logo punto de venta"
-                    className="size-full object-cover"
-                  />
-                </div>
-                <span className="truncate text-sm font-semibold text-foreground/85">
-                  Nuevo Origen
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <h1 className="text-[1.85rem] font-black tracking-tight text-foreground">
-                Vender
-              </h1>
-              <div
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest",
-                  isOnline
-                    ? "border-emerald-400/35 bg-emerald-500/12 text-emerald-200"
-                    : "border-rose-400/35 bg-rose-500/12 text-rose-200",
-                )}
-              >
-                {isOnline ? (
-                  <Wifi className="size-3" aria-hidden />
-                ) : (
-                  <WifiOff className="size-3" aria-hidden />
-                )}
-                {isOnline ? "Online" : "Offline"}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                className="group inline-flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label="Mas opciones"
-              >
-                <MoreVertical className="size-4.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => void toggleFullscreen()}
-                className="group inline-flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label={
-                  isFullscreen
-                    ? "Salir de pantalla completa"
-                    : "Pantalla completa"
-                }
-              >
-                {isFullscreen ? (
-                  <Minimize2 className="size-4.5" />
-                ) : (
-                  <Maximize2 className="size-4.5" />
-                )}
-              </button>
-              <div className="h-6 w-px bg-border" />
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Avatar className="size-10 ring-1 ring-border">
-                    <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=francisco" />
-                    <AvatarFallback>FR</AvatarFallback>
-                  </Avatar>
-                  <div className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border border-card bg-primary" />
-                </div>
-                <div className="flex flex-col leading-tight">
-                  <span className="text-sm font-semibold text-foreground/85">
-                    Francisco Ruiz
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-meadow">
-                    Admin
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
+        <PopSaleHeader
+          popSlug={popSlug}
+          title="Vender"
+          isOnline={isOnline}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={toggleFullscreen}
+          user={{
+            name: "Francisco Ruiz",
+            role: "Admin",
+            avatarSrc:
+              "https://api.dicebear.com/7.x/avataaars/svg?seed=francisco",
+            initials: "FR",
+          }}
+        />
 
         <main className="grid min-h-0 grid-cols-[minmax(0,1fr)_380px]">
           <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(4.75rem,auto)]">

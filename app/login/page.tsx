@@ -88,8 +88,11 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <Button type="button" className="h-12 w-full bg-linear-to-r from-emerald-500 to-teal-500 text-base font-semibold text-white shadow-[0_16px_30px_-14px_rgba(16,185,129,0.65)] hover:from-emerald-400 hover:to-teal-400">
-                Ingresar
+              <Button
+                asChild
+                className="h-12 w-full bg-linear-to-r from-emerald-500 to-teal-500 text-base font-semibold text-white shadow-[0_16px_30px_-14px_rgba(16,185,129,0.65)] hover:from-emerald-400 hover:to-teal-400"
+              >
+                <Link href="/home">Ingresar</Link>
               </Button>
 
               <Link

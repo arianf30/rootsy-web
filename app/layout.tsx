@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Nunito, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { AppAppearanceShell } from '@/components/app-appearance-shell'
 import './globals.css'
 
 const nunito = Nunito({ 
@@ -43,9 +44,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className="dark scroll-smooth">
-      <body className={`${nunito.variable} ${geistMono.variable} font-sans antialiased`}>
-        {children}
+    <html lang="es" className="scroll-smooth" suppressHydrationWarning>
+      <body
+        className={`${nunito.variable} ${geistMono.variable} font-sans antialiased`}
+      >
+        <AppAppearanceShell>{children}</AppAppearanceShell>
         <Analytics />
       </body>
     </html>

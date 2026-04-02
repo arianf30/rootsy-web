@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import useEmblaCarousel from 'embla-carousel-react'
 import {
   Search,
@@ -103,6 +103,13 @@ type SectionKey = keyof typeof menuSections
 
 export default function MenuPage() {
   const router = useRouter()
+  const params = useParams()
+  const popSlug =
+    typeof params?.pop === "string"
+      ? params.pop
+      : Array.isArray(params?.pop)
+        ? params.pop[0] ?? "1"
+        : "1"
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [searchQuery, setSearchQuery] = useState("")
   const [showSearch, setShowSearch] = useState(false)
@@ -370,7 +377,12 @@ export default function MenuPage() {
                           <button
                             key={item.name}
                             onClick={() => {
-                              if (item.name === "Vender") router.push("/1/sale")
+                              if (item.name === "Vender") {
+                                router.push(`/${popSlug}/sale`)
+                              }
+                              if (item.name === "Cajas") {
+                                router.push(`/${popSlug}/cajas`)
+                              }
                             }}
                             className="group flex flex-col items-center justify-self-center gap-2.5 w-24 transition-all duration-200 hover:scale-105 active:scale-95"
                           >
