@@ -1,5 +1,6 @@
 "use client"
 
+import withAuth from "@/hoc/withAuth"
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -101,7 +102,7 @@ const dockItems = [
 
 type SectionKey = keyof typeof menuSections
 
-export default function MenuPage() {
+function MenuPage() {
   const router = useRouter()
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [searchQuery, setSearchQuery] = useState("")
@@ -442,3 +443,5 @@ export default function MenuPage() {
     </div>
   )
 }
+
+export default withAuth(MenuPage)

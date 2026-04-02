@@ -1,5 +1,6 @@
 "use client"
 
+import withAuth from "@/hoc/withAuth"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -340,7 +341,7 @@ function CartItemTitleMarquee({
   )
 }
 
-export default function SalePage() {
+function SalePage() {
   const [vistaCatalogo, setVistaCatalogo] = useState<VistaCatalogo>({
     modo: "categoria",
     categoria: "Principales",
@@ -1901,3 +1902,5 @@ export default function SalePage() {
     </div>
   )
 }
+
+export default withAuth(SalePage)

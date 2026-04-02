@@ -1,4 +1,7 @@
+"use client"
+
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   Download,
   HelpCircle,
@@ -17,6 +20,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/context/AuthContextSupabase"
+import withAuth from "@/hoc/withAuth"
 
 const SUCURSALES = [
   {
@@ -45,7 +50,22 @@ const SUCURSALES = [
   },
 ] as const
 
-export default function HomePage() {
+function HomePage() {
+  const router = useRouter()
+  const { logOut, user } = useAuth()
+
+  const handleLogOut = async () => {
+    await logOut()
+    router.push("/login")
+    router.refresh()
+  }
+
+  const displayName =
+    user?.user_metadata?.full_name ??
+    user?.user_metadata?.name ??
+    user?.email?.split("@")[0] ??
+    "Usuario"
+
   return (
     <div className="relative h-screen overflow-hidden bg-[#070a09] text-white">
       <div className="pointer-events-none absolute inset-0">
@@ -93,6 +113,7 @@ export default function HomePage() {
                 <DropdownMenuItem
                   variant="destructive"
                   className="cursor-pointer gap-2.5"
+                  onSelect={() => void handleLogOut()}
                 >
                   <LogOut className="size-4" />
                   Cerrar sesion
@@ -112,7 +133,7 @@ export default function HomePage() {
       <main className="relative z-10 mx-auto flex h-[calc(100svh-4.5rem)] w-full max-w-7xl flex-col items-center justify-center overflow-hidden px-5 pb-24 pt-14 sm:px-8 lg:px-10">
         <section className="w-full max-w-4xl text-center">
           <h1 className="text-balance text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
-            Bienvenid@ Francisco!{" "}
+            Bienvenid@ {displayName}!{" "}
             <span className="inline-block origin-bottom-right animate-[wave_2.4s_ease-in-out_infinite]">
               👋
             </span>
@@ -183,3 +204,5 @@ export default function HomePage() {
     </div>
   )
 }
+
+export default withAuth(HomePage)
