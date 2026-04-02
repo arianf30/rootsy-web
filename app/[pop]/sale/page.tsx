@@ -193,6 +193,19 @@ function normalizarBusqueda(s: string) {
     .toLowerCase()
 }
 
+function IconoLimpiarBusqueda({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={cn("size-[14px] shrink-0", className)}
+      aria-hidden
+    >
+      <path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+    </svg>
+  )
+}
+
 function CartItemTitleMarquee({
   text,
   active,
@@ -367,6 +380,8 @@ export default function SalePage() {
   >({})
   const [isOnline, setIsOnline] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const busquedaProductosInputRef = useRef<HTMLInputElement>(null)
+  const busquedaClienteInputRef = useRef<HTMLInputElement>(null)
 
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
@@ -864,11 +879,28 @@ export default function SalePage() {
                   <div className="relative min-w-0 flex-1 max-w-md">
                     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/40" />
                     <Input
+                      ref={busquedaProductosInputRef}
                       value={busqueda}
                       onChange={(e) => setBusqueda(e.target.value)}
                       placeholder="Buscar o escanear producto..."
-                      className="h-10 border-white/10 bg-black/20 pl-9 text-white placeholder:text-white/35"
+                      className={cn(
+                        "h-10 border-white/10 bg-black/20 pl-9 text-white placeholder:text-white/35",
+                        busqueda.length > 0 && "pr-9",
+                      )}
                     />
+                    {busqueda.length > 0 ? (
+                      <button
+                        type="button"
+                        aria-label="Limpiar búsqueda"
+                        className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-white/50 transition-[color,background-color] duration-150 hover:bg-white/[0.07] hover:text-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70 focus-visible:ring-offset-0 active:bg-white/11"
+                        onClick={() => {
+                          setBusqueda("")
+                          busquedaProductosInputRef.current?.focus()
+                        }}
+                      >
+                        <IconoLimpiarBusqueda />
+                      </button>
+                    ) : null}
                   </div>
                   <span className="shrink-0 text-sm font-medium text-white/60">
                     {productosFiltrados.length} productos mostrados
@@ -1502,12 +1534,29 @@ export default function SalePage() {
             <div className="relative mb-3">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                ref={busquedaClienteInputRef}
                 value={busquedaClienteModal}
                 onChange={(e) => setBusquedaClienteModal(e.target.value)}
                 placeholder="Nombre del cliente…"
-                className="h-11 rounded-lg pl-9"
+                className={cn(
+                  "h-11 rounded-lg pl-9",
+                  busquedaClienteModal.length > 0 && "pr-9",
+                )}
                 autoComplete="off"
               />
+              {busquedaClienteModal.length > 0 ? (
+                <button
+                  type="button"
+                  aria-label="Limpiar búsqueda"
+                  className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-[color,background-color] duration-150 hover:bg-muted/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:bg-muted"
+                  onClick={() => {
+                    setBusquedaClienteModal("")
+                    busquedaClienteInputRef.current?.focus()
+                  }}
+                >
+                  <IconoLimpiarBusqueda />
+                </button>
+              ) : null}
             </div>
             <ul
               className="game-scroll max-h-[min(50vh,16rem)] space-y-2 overflow-y-auto rounded-xl border border-border/40 bg-muted/20 p-2 pr-1"
