@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
 import {
   Download,
   HelpCircle,
@@ -20,39 +21,85 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Spinner } from "@/components/ui/spinner"
 import { useAuth } from "@/context/AuthContextSupabase"
 import withAuth from "@/hoc/withAuth"
+import {
+  getHomePageData,
+  type UserPopListItem,
+  type UserProfileDTO,
+} from "@/app/profile/actions"
+import { cn } from "@/lib/utils"
 
-const SUCURSALES = [
+const ACCENTS = [
   {
-    id: "1",
-    nombre: "Nuevo Origen",
-    sigla: "NO",
     accent: "from-amber-400 via-yellow-500 to-orange-600",
     glow: "shadow-amber-500/35",
-    badge: "Activo",
   },
   {
-    id: "2",
-    nombre: "Sano de Raiz",
-    sigla: "SR",
     accent: "from-emerald-400 via-teal-500 to-cyan-600",
     glow: "shadow-emerald-500/35",
-    badge: "Activo",
   },
   {
-    id: "3",
-    nombre: "Pepe Guapo",
-    sigla: "PG",
     accent: "from-fuchsia-500 via-violet-600 to-indigo-700",
     glow: "shadow-fuchsia-500/35",
-    badge: "Activo",
+  },
+  {
+    accent: "from-rose-400 via-red-500 to-orange-600",
+    glow: "shadow-rose-500/35",
+  },
+  {
+    accent: "from-sky-400 via-blue-500 to-indigo-600",
+    glow: "shadow-sky-500/35",
   },
 ] as const
 
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return "?"
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase()
+  }
+  return (
+    parts[0].charAt(0) + parts[parts.length - 1].charAt(0)
+  ).toUpperCase()
+}
+
+function avatarFallbackLetters(profile: UserProfileDTO | null, email?: string | null): string {
+  const fn = profile?.firstName?.trim()
+  const ln = profile?.lastName?.trim()
+  if (fn && ln) return (fn.charAt(0) + ln.charAt(0)).toUpperCase()
+  if (fn) return fn.slice(0, 2).toUpperCase()
+  const fromEmail = email?.split("@")[0]?.slice(0, 2)
+  return (fromEmail ?? "U").toUpperCase()
+}
+
 function HomePage() {
   const router = useRouter()
-  const { logOut, user } = useAuth()
+  const { logOut, user, loading: authLoading } = useAuth()
+
+  const [pops, setPops] = useState<UserPopListItem[] | null>(null)
+  const [profile, setProfile] = useState<UserProfileDTO | null>(null)
+  const [loadError, setLoadError] = useState(false)
+  const [canCreatePop, setCanCreatePop] = useState(false)
+
+  const loadData = useCallback(async () => {
+    setLoadError(false)
+    try {
+      const data = await getHomePageData()
+      setPops(data.pops)
+      setProfile(data.profile)
+      setCanCreatePop(data.canCreatePop)
+    } catch {
+      setPops([])
+      setLoadError(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (authLoading) return
+    void loadData()
+  }, [authLoading, loadData])
 
   const handleLogOut = async () => {
     await logOut()
@@ -61,10 +108,19 @@ function HomePage() {
   }
 
   const displayName =
-    user?.user_metadata?.full_name ??
-    user?.user_metadata?.name ??
-    user?.email?.split("@")[0] ??
+    profile?.fullName?.trim() ||
+    (user?.user_metadata?.full_name as string | undefined) ||
+    (user?.user_metadata?.name as string | undefined) ||
+    user?.user_metadata?.first_name ||
+    user?.email?.split("@")[0] ||
     "Usuario"
+
+  const avatarUrl =
+    profile?.imageUrl?.trim() ||
+    (user?.user_metadata?.avatar_url as string | undefined) ||
+    null
+
+  const isLoading = authLoading || pops === null
 
   return (
     <div className="relative h-screen overflow-hidden bg-[#070a09] text-white">
@@ -121,16 +177,18 @@ function HomePage() {
               </DropdownMenuContent>
             </DropdownMenu>
             <Avatar className="size-10 ring-2 ring-white/15">
-              <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=francisco" />
-              <AvatarFallback className="bg-emerald-900/40 text-white">
-                FR
+              {avatarUrl ? (
+                <AvatarImage src={avatarUrl} alt="" />
+              ) : null}
+              <AvatarFallback className="bg-emerald-900/40 text-sm font-semibold text-white">
+                {avatarFallbackLetters(profile, user?.email ?? null)}
               </AvatarFallback>
             </Avatar>
           </div>
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto flex h-[calc(100svh-4.5rem)] w-full max-w-7xl flex-col items-center justify-center overflow-hidden px-5 pb-24 pt-14 sm:px-8 lg:px-10">
+      <main className="relative z-10 mx-auto flex h-[calc(100svh-4.5rem)] w-full max-w-7xl flex-col items-center justify-center overflow-y-auto overflow-x-hidden px-5 pb-24 pt-14 sm:px-8 lg:px-10">
         <section className="w-full max-w-4xl text-center">
           <h1 className="text-balance text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
             Bienvenid@ {displayName}!{" "}
@@ -142,49 +200,142 @@ function HomePage() {
             A que punto de venta queres ingresar?
           </p>
 
-          <ul className="mt-12 mx-auto flex max-w-3xl list-none flex-wrap justify-center gap-x-2 gap-y-7 sm:gap-x-3">
-            {SUCURSALES.map((sucursal) => (
-              <li key={sucursal.id} className="group basis-[9.1rem] sm:basis-[9.4rem]">
-                <button
-                  type="button"
-                  className="mx-auto flex w-full max-w-40 flex-col items-center"
-                >
-                  <div className="relative">
-                    <div
-                      className={`absolute inset-0 rounded-full opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-90 ${sucursal.glow}`}
-                    />
-                    <div
-                      className={`relative flex size-28 items-center justify-center rounded-full bg-linear-to-br ${sucursal.accent} shadow-xl ring-2 ring-white/14 transition-all duration-300 group-hover:-translate-y-1 group-hover:scale-[1.04]`}
-                    >
-                      <span className="text-[1.72rem] font-black tracking-tight text-white drop-shadow">
-                        {sucursal.sigla}
-                      </span>
-                    </div>
-                    <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 border-0 bg-black/70 text-[10px] uppercase tracking-wider text-emerald-200">
-                      {sucursal.badge}
-                    </Badge>
-                  </div>
-                  <span className="mt-4 text-[0.92rem] font-semibold text-white/78 transition-colors group-hover:text-white">
-                    {sucursal.nombre}
-                  </span>
-                </button>
-              </li>
-            ))}
-
-            <li className="group basis-[9.1rem] sm:basis-[9.4rem]">
+          {loadError ? (
+            <p className="mt-8 text-sm text-amber-200/90">
+              No pudimos cargar tus puntos de venta.{" "}
               <button
                 type="button"
-                className="mx-auto flex w-full max-w-40 flex-col items-center"
+                className="font-semibold underline underline-offset-2 hover:text-white"
+                onClick={() => void loadData()}
               >
-                <div className="relative flex size-28 items-center justify-center rounded-full border-2 border-dashed border-white/22 bg-white/3 transition-all duration-300 group-hover:-translate-y-1 group-hover:border-emerald-300/45 group-hover:bg-emerald-400/7">
-                  <Plus className="size-8 text-white/45 transition-colors group-hover:text-emerald-200" />
-                </div>
-                <span className="mt-4 text-[0.92rem] font-semibold text-white/45 transition-colors group-hover:text-white/70">
-                  Agregar nuevo
-                </span>
+                Reintentar
               </button>
-            </li>
-          </ul>
+            </p>
+          ) : null}
+
+          {isLoading ? (
+            <div
+              className="mt-16 flex flex-col items-center justify-center gap-3 text-white/60"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <Spinner className="size-10 text-emerald-400/80" />
+              <span className="text-sm">Cargando tus puntos de venta…</span>
+            </div>
+          ) : (
+            <ul className="mt-12 mx-auto flex max-w-3xl list-none flex-wrap justify-center gap-x-2 gap-y-7 sm:gap-x-3">
+              {pops!.length === 0 ? (
+                <li className="w-full max-w-md rounded-2xl border border-white/12 bg-white/5 px-6 py-10 text-center text-white/75">
+                  <p className="text-base leading-relaxed">
+                    No tenés puntos de venta asociados con acceso activo. Si
+                    esperabas ver uno, pedí que te inviten o que activen tu rol en
+                    el POP.
+                  </p>
+                </li>
+              ) : (
+                pops!.map((pop, index) => {
+                  const palette = ACCENTS[index % ACCENTS.length]!
+                  const sigla = initialsFromName(pop.name)
+                  const sub = pop.subscription
+
+                  return (
+                    <li
+                      key={pop.id}
+                      className="group basis-[9.1rem] sm:basis-[9.4rem]"
+                    >
+                      <div className="mx-auto flex w-full max-w-40 flex-col items-center">
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/${pop.id}/menu`)}
+                          className="flex w-full flex-col items-center"
+                        >
+                          <div className="relative">
+                            <div
+                              className={cn(
+                                "absolute inset-0 rounded-full opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-90",
+                                palette.glow,
+                              )}
+                            />
+                            <div
+                              className={cn(
+                                "relative flex size-28 items-center justify-center rounded-full bg-linear-to-br shadow-xl ring-2 ring-white/14 transition-all duration-300 group-hover:-translate-y-1 group-hover:scale-[1.04]",
+                                palette.accent,
+                              )}
+                            >
+                              <span className="text-[1.72rem] font-black tracking-tight text-white drop-shadow">
+                                {sigla}
+                              </span>
+                            </div>
+                            <PopStatusBadge pop={pop} />
+                          </div>
+                          <span className="mt-4 text-center text-[0.92rem] font-semibold text-white/78 transition-colors group-hover:text-white">
+                            {pop.name}
+                          </span>
+                          {!pop.isOwner ? (
+                            <span className="mt-1 line-clamp-2 text-center text-[10px] font-medium uppercase tracking-wider text-white/40">
+                              {pop.roleName}
+                            </span>
+                          ) : null}
+                        </button>
+
+                        {pop.isOwner &&
+                        sub &&
+                        sub.isActive === false ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            className="mt-3 h-8 border-white/20 bg-white/10 text-xs text-white hover:bg-white/15"
+                            onClick={() =>
+                              router.push(`/${pop.id}/subscribe`)
+                            }
+                          >
+                            Activar suscripción
+                          </Button>
+                        ) : null}
+
+                        {sub?.status === "trial" &&
+                        sub.daysRemaining != null ? (
+                          <p className="mt-2 max-w-40 text-center text-[10px] leading-snug text-white/55">
+                            Prueba: {sub.daysRemaining} días restantes
+                          </p>
+                        ) : null}
+
+                        {sub?.isActive &&
+                        sub.status === "active" &&
+                        sub.planDisplayName ? (
+                          <p className="mt-2 max-w-40 text-center text-[10px] leading-snug text-white/55">
+                            {sub.planDisplayName}
+                            {sub.businessTypeDisplayName
+                              ? ` · ${sub.businessTypeDisplayName}`
+                              : ""}
+                          </p>
+                        ) : null}
+                      </div>
+                    </li>
+                  )
+                })
+              )}
+
+              {canCreatePop ? (
+                <li className="group basis-[9.1rem] sm:basis-[9.4rem]">
+                  <button
+                    type="button"
+                    onClick={() => router.push("/pops/create")}
+                    className="mx-auto flex w-full max-w-40 flex-col items-center"
+                  >
+                    <div className="relative flex size-28 items-center justify-center rounded-full border-2 border-dashed border-white/22 bg-white/3 transition-all duration-300 group-hover:-translate-y-1 group-hover:border-emerald-300/45 group-hover:bg-emerald-400/7">
+                      <Plus className="size-8 text-white/45 transition-colors group-hover:text-emerald-200" />
+                    </div>
+                    <span className="mt-4 text-[0.92rem] font-semibold text-white/45 transition-colors group-hover:text-white/70">
+                      Agregar nuevo
+                    </span>
+                  </button>
+                </li>
+              ) : null}
+            </ul>
+          )}
         </section>
 
         <div className="absolute bottom-10 left-1/2 flex -translate-x-1/2 items-center gap-4">
@@ -202,6 +353,40 @@ function HomePage() {
         </div>
       </main>
     </div>
+  )
+}
+
+function PopStatusBadge({ pop }: { pop: UserPopListItem }) {
+  const sub = pop.subscription
+
+  if (!sub) {
+    return (
+      <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 border-0 bg-black/70 text-[10px] uppercase tracking-wider text-emerald-200">
+        {pop.isOwner ? "Propietario" : "Activo"}
+      </Badge>
+    )
+  }
+
+  if (sub.status === "trial") {
+    return (
+      <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 border-0 bg-amber-950/80 text-[10px] uppercase tracking-wider text-amber-100">
+        Prueba
+      </Badge>
+    )
+  }
+
+  if (sub.isActive) {
+    return (
+      <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 border-0 bg-black/70 text-[10px] uppercase tracking-wider text-emerald-200">
+        Activo
+      </Badge>
+    )
+  }
+
+  return (
+    <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 border-0 bg-red-950/70 text-[10px] uppercase tracking-wider text-red-100">
+      Inactivo
+    </Badge>
   )
 }
 
