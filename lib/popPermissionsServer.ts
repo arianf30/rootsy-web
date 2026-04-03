@@ -1,12 +1,11 @@
 import { cache } from "react"
 import { requireAuthenticatedUser } from "@/lib/authHelpers"
+import { permissionRowsToKeys } from "@/lib/popPermissionConstants"
 import { createClient } from "@/utils/supabase/server"
 
 export type PopPermissionsSnapshotJSON = {
   keys: string[]
 }
-
-type PermRow = { resource: string; action: string }
 
 const fetchPopPermissionsForUser = cache(
   async (popId: string, userId: string): Promise<PopPermissionsSnapshotJSON> => {
@@ -18,8 +17,7 @@ const fetchPopPermissionsForUser = cache(
     if (error || !Array.isArray(data)) {
       return { keys: [] }
     }
-    const keys = (data as PermRow[]).map((p) => `${p.resource}:${p.action}`)
-    return { keys }
+    return { keys: permissionRowsToKeys(data) }
   },
 )
 

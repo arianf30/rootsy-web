@@ -2,6 +2,7 @@
 
 import { requireAuthenticatedUser } from "@/lib/authHelpers"
 import { getPopById, validatePopAccess } from "@/lib/popHelpers"
+import { permissionRowsToKeys } from "@/lib/popPermissionConstants"
 import { createClient } from "@/utils/supabase/server"
 
 type AccessiblePopRow = {
@@ -11,8 +12,6 @@ type AccessiblePopRow = {
   role_name: string
   is_owner: boolean
 }
-
-type PermRow = { resource: string; action: string }
 
 export async function getPopMenuData(popId: string) {
   try {
@@ -68,9 +67,7 @@ export async function getPopMenuData(popId: string) {
       }
     }
 
-    const permissionKeys = (permRes.data as PermRow[]).map(
-      (p) => `${p.resource}:${p.action}`,
-    )
+    const permissionKeys = permissionRowsToKeys(permRes.data)
 
     const accessible = (popsRes.data as AccessiblePopRow[] | null) ?? []
     const popRow = accessible.find((p) => p.pop_id === popId)

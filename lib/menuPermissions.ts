@@ -9,7 +9,7 @@ export function getMenuResourceAction(
   if (menuLink === "sale") return { resource: "sale", action: "read" }
   if (menuLink === "settings") return { resource: "settings", action: "read" }
   if (menuLink === "hr") return { resource: "hr", action: "read" }
-  if (menuLink === "articles") return { resource: "article", action: "read" }
+  if (menuLink === "articles") return { resource: "articles", action: "read" }
   return null
 }
 
