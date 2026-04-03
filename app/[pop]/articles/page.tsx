@@ -722,7 +722,7 @@ function ArticlesPage() {
         <DialogContent
           data-rootsy-light-shell="true"
           showCloseButton
-          className="max-h-[min(90vh,640px)] overflow-y-auto border-border bg-card sm:max-w-md"
+          className="max-h-[min(90vh,640px)] overflow-y-auto border-border bg-card text-foreground sm:max-w-md"
         >
           <DialogHeader>
             <DialogTitle>Editar artículo</DialogTitle>
@@ -841,7 +841,7 @@ function ArticlesPage() {
         <DialogContent
           data-rootsy-light-shell="true"
           showCloseButton
-          className="border-border bg-card sm:max-w-md"
+          className="border-border bg-card text-foreground sm:max-w-md"
         >
           <DialogHeader>
             <DialogTitle>¿Eliminar artículo?</DialogTitle>
@@ -895,7 +895,7 @@ function ArticlesPage() {
         <DialogContent
           data-rootsy-light-shell="true"
           showCloseButton
-          className="max-h-[min(90vh,640px)] overflow-y-auto border-border bg-card sm:max-w-md"
+          className="max-h-[min(90vh,640px)] overflow-y-auto border-border bg-card text-foreground sm:max-w-md"
         >
           <DialogHeader>
             <DialogTitle>Nuevo artículo</DialogTitle>
@@ -1036,7 +1036,7 @@ function ArticlesPage() {
         <DialogContent
           data-rootsy-light-shell="true"
           showCloseButton
-          className="max-h-[min(90vh,560px)] overflow-y-auto border-border bg-card sm:max-w-lg"
+          className="max-h-[min(90vh,560px)] overflow-y-auto border-border bg-card text-foreground sm:max-w-lg"
         >
           <DialogHeader>
             <DialogTitle>Categorías</DialogTitle>

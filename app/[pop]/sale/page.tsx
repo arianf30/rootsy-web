@@ -4,6 +4,19 @@ import withAuth from "@/hoc/withAuth"
 import Image from "next/image"
 import Link from "next/link"
 import {
+  getSaleCatalog,
+  type SaleCatalogArticle,
+  type SaleCatalogClient,
+  type SaleCatalogPaymentMethod,
+} from "@/app/[pop]/sale/actions"
+import {
+  DEFAULT_SALE_SITE_ID,
+  getSaleInvoiceTypeOptionsForSite,
+  type SaleInvoiceTypeOption,
+} from "@/lib/saleInvoiceTypes"
+import { useAuth } from "@/context/AuthContextSupabase"
+import { useParams } from "next/navigation"
+import {
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -70,122 +83,24 @@ type VistaCatalogo =
   | { modo: "promociones" }
   | { modo: "con_descuento" }
 
-const CATEGORIAS = [
-  "Entradas",
-  "Principales",
-  "Postres",
-  "Bebidas",
-  "Categoria A",
-  "Categoria B",
-] as const
+const CATEGORIA_TODOS = "Todos"
 
-const PRODUCTOS: Producto[] = [
-  {
-    id: "lomito",
-    nombre: "Lomito Nuevo Origen",
-    descripcion: "Con salsa criolla de la casa",
-    precio: 640,
-    precioOriginal: 860,
-    categoria: "Principales",
-    imagen:
-      "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=500&h=340&fit=crop",
-    promo: "-25%",
-  },
-  {
-    id: "pizza-casa",
-    nombre: "Pizza de la casa",
-    descripcion: "Morrones verdes y aceituna",
-    precio: 1200,
-    categoria: "Principales",
-    imagen:
-      "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&h=340&fit=crop",
-  },
-  {
-    id: "pizza-rustica",
-    nombre: "Pizza rustica dona Nora",
-    descripcion: "Con masa madre",
-    precio: 1400,
-    categoria: "Principales",
-    imagen:
-      "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&h=340&fit=crop",
-  },
-  {
-    id: "pizza-napo",
-    nombre: "Pizza Napolitana",
-    descripcion: "Muzzarella, jamon y tomates",
-    precio: 1340,
-    categoria: "Principales",
-    imagen:
-      "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=500&h=340&fit=crop",
-  },
-  {
-    id: "hamburguesa",
-    nombre: "Hamburguesa Especial",
-    descripcion: "Jamon, lechuga, tomate y cheddar",
-    precio: 850,
-    categoria: "Principales",
-    imagen:
-      "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&h=340&fit=crop",
-  },
-  {
-    id: "especial",
-    nombre: "Especial de la casa",
-    descripcion: "Arian se la come",
-    precio: 750,
-    precioOriginal: 940,
-    categoria: "Principales",
-    imagen:
-      "https://images.unsplash.com/photo-1550317138-10000687a72b?w=500&h=340&fit=crop",
-    promo: "-25%",
-  },
-  {
-    id: "cafe-invierno",
-    nombre: "Café con leche",
-    descripcion: "Campaña estación — precio lista único",
-    precio: 500,
-    categoria: "Bebidas",
-    imagen:
-      "https://images.unsplash.com/photo-1511920170733-2303c14c0048?w=500&h=340&fit=crop",
-    promo: "Campaña invierno",
-  },
-  {
-    id: "jugo-natural",
-    nombre: "Jugo natural",
-    descripcion: "Naranja o pomelo",
-    precio: 280,
-    precioOriginal: 350,
-    categoria: "Bebidas",
-    imagen:
-      "https://images.unsplash.com/photo-1622597439844-0df16348ac85?w=500&h=340&fit=crop",
-  },
-]
+function articleToProducto(a: SaleCatalogArticle): Producto {
+  return {
+    id: a.id,
+    nombre: a.name,
+    descripcion: a.description.trim() ? a.description : "—",
+    precio: a.salePrice,
+    categoria: a.categoryName.trim() ? a.categoryName : "—",
+    imagen: `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(a.id)}&backgroundColor=1a1f1d`,
+  }
+}
 
 const fmt = new Intl.NumberFormat("es-AR", {
   style: "currency",
   currency: "ARS",
   minimumFractionDigits: 2,
 })
-
-const CLIENTES_HARDCODE = [
-  "Blas Paredes",
-  "Arián Fernández",
-  "Marcos Galperín",
-] as const
-
-const COMPROBANTES_OPCIONES = [
-  "Factura A",
-  "Factura B",
-  "Factura C",
-  "Recibo",
-  "Recibo X",
-] as const
-
-const TARJETAS_DEBITO = ["Visa", "Mastercard", "Naranja", "Cabal"] as const
-const TARJETAS_CREDITO = [
-  "American Express",
-  "Visa",
-  "Mastercard",
-] as const
 
 function normalizarBusqueda(s: string) {
   return s
@@ -342,22 +257,95 @@ function CartItemTitleMarquee({
 }
 
 function SalePage() {
+  const params = useParams()
+  const popId = params?.pop as string | undefined
+  const { user } = useAuth()
+
+  const [catalogArticles, setCatalogArticles] = useState<SaleCatalogArticle[]>(
+    [],
+  )
+  const [saleClients, setSaleClients] = useState<SaleCatalogClient[]>([])
+  const [salePaymentMethods, setSalePaymentMethods] = useState<
+    SaleCatalogPaymentMethod[]
+  >([])
+  const [canReadClients, setCanReadClients] = useState(false)
+  const [canReadPaymentMethods, setCanReadPaymentMethods] = useState(false)
+  const [invoiceTypeSiteId, setInvoiceTypeSiteId] = useState<string>(
+    DEFAULT_SALE_SITE_ID,
+  )
+  const [saleCategoryNames, setSaleCategoryNames] = useState<string[]>([])
+  const [popName, setPopName] = useState("")
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [catalogError, setCatalogError] = useState<string | null>(null)
+
+  const categoriasNav = useMemo(
+    () => [CATEGORIA_TODOS, ...saleCategoryNames],
+    [saleCategoryNames],
+  )
+
+  const loadCatalog = useCallback(async () => {
+    if (!popId) {
+      setCatalogLoading(false)
+      setCatalogError("Punto de venta no encontrado")
+      return
+    }
+    setCatalogLoading(true)
+    setCatalogError(null)
+    const res = await getSaleCatalog(popId)
+    if (!res.success) {
+      setCatalogArticles([])
+      setSaleClients([])
+      setSalePaymentMethods([])
+      setCanReadClients(false)
+      setCanReadPaymentMethods(false)
+      setSaleCategoryNames([])
+      setPopName("")
+      setCatalogError(res.error)
+      setCatalogLoading(false)
+      return
+    }
+    setCatalogArticles(res.articles)
+    setSaleClients(res.clients)
+    setSalePaymentMethods(res.paymentMethods)
+    setCanReadClients(res.canReadClients)
+    setCanReadPaymentMethods(res.canReadPaymentMethods)
+    setInvoiceTypeSiteId(res.invoiceTypeSiteId)
+    setSaleCategoryNames(
+      [...new Set(res.categories.map((c) => c.name).filter(Boolean))],
+    )
+    setPopName(res.popName)
+    setCatalogError(null)
+    setCatalogLoading(false)
+  }, [popId])
+
+  useEffect(() => {
+    void loadCatalog()
+  }, [loadCatalog])
+
+  const productosCatalogo = useMemo(
+    () => catalogArticles.map(articleToProducto),
+    [catalogArticles],
+  )
+
   const [vistaCatalogo, setVistaCatalogo] = useState<VistaCatalogo>({
     modo: "categoria",
-    categoria: "Principales",
+    categoria: CATEGORIA_TODOS,
   })
   const [modoVista, setModoVista] = useState<"grid" | "lista">("grid")
   const [busqueda, setBusqueda] = useState("")
-  const [carrito, setCarrito] = useState<ItemCarrito[]>([
-    { productoId: "pizza-casa", cantidad: 2 },
-    { productoId: "pizza-rustica", cantidad: 1 },
-  ])
-  const [nombreCliente, setNombreCliente] = useState<string | null>(null)
+  const [carrito, setCarrito] = useState<ItemCarrito[]>([])
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<{
+    id: string
+    name: string
+  } | null>(null)
   const [clienteModalAbierto, setClienteModalAbierto] = useState(false)
   const [busquedaClienteModal, setBusquedaClienteModal] = useState("")
   const [comprobante, setComprobante] = useState<string | null>(null)
   const [comprobanteModalAbierto, setComprobanteModalAbierto] = useState(false)
-  const [metodoPago, setMetodoPago] = useState<string | null>(null)
+  const [metodoPagoSeleccionado, setMetodoPagoSeleccionado] = useState<{
+    id: string
+    label: string
+  } | null>(null)
   const [pagoModalAbierto, setPagoModalAbierto] = useState(false)
   const [modoDescuento, setModoDescuento] = useState<"porcentaje" | "fijo">(
     "porcentaje",
@@ -383,13 +371,18 @@ function SalePage() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const busquedaProductosInputRef = useRef<HTMLInputElement>(null)
   const busquedaClienteInputRef = useRef<HTMLInputElement>(null)
+  const vistaAntesBusquedaRef = useRef<VistaCatalogo | null>(null)
+  const busquedaTrimPrevRef = useRef("")
 
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
-    return PRODUCTOS.filter((p) => {
-      const matchVista =
-        vistaCatalogo.modo === "categoria"
-          ? p.categoria === vistaCatalogo.categoria
+    const hayBusqueda = q.length > 0
+    return productosCatalogo.filter((p) => {
+      const matchVista = hayBusqueda
+        ? true
+        : vistaCatalogo.modo === "categoria"
+          ? vistaCatalogo.categoria === CATEGORIA_TODOS ||
+            p.categoria === vistaCatalogo.categoria
           : vistaCatalogo.modo === "promociones"
             ? Boolean(p.promo?.trim())
             : p.precioOriginal != null && p.precioOriginal > p.precio
@@ -399,16 +392,46 @@ function SalePage() {
         p.descripcion.toLowerCase().includes(q)
       return matchVista && matchQ
     })
+  }, [busqueda, vistaCatalogo, productosCatalogo])
+
+  useEffect(() => {
+    const trimmed = busqueda.trim()
+    const prevTrimmed = busquedaTrimPrevRef.current
+    const wasEmpty = prevTrimmed.length === 0
+    const isEmpty = trimmed.length === 0
+
+    if (!isEmpty && wasEmpty) {
+      vistaAntesBusquedaRef.current = vistaCatalogo
+    }
+
+    if (isEmpty && !wasEmpty) {
+      const saved = vistaAntesBusquedaRef.current
+      if (saved != null) {
+        setVistaCatalogo(saved)
+        vistaAntesBusquedaRef.current = null
+      }
+    }
+
+    if (!isEmpty) {
+      setVistaCatalogo((prev) => {
+        if (prev.modo === "categoria" && prev.categoria === CATEGORIA_TODOS) {
+          return prev
+        }
+        return { modo: "categoria", categoria: CATEGORIA_TODOS }
+      })
+    }
+
+    busquedaTrimPrevRef.current = trimmed
   }, [busqueda, vistaCatalogo])
 
   const itemsDetallados = useMemo(() => {
     return carrito
       .map((i) => ({
         ...i,
-        producto: PRODUCTOS.find((p) => p.id === i.productoId),
+        producto: productosCatalogo.find((p) => p.id === i.productoId),
       }))
       .filter((i) => i.producto)
-  }, [carrito])
+  }, [carrito, productosCatalogo])
 
   const subtotalBruto = useMemo(
     () =>
@@ -487,11 +510,47 @@ function SalePage() {
 
   const clientesFiltradosModal = useMemo(() => {
     const q = normalizarBusqueda(busquedaClienteModal.trim())
-    if (!q) return [...CLIENTES_HARDCODE]
-    return CLIENTES_HARDCODE.filter((n) =>
-      normalizarBusqueda(n).includes(q),
+    if (!q) return saleClients
+    return saleClients.filter((c) =>
+      normalizarBusqueda(c.name).includes(q),
     )
-  }, [busquedaClienteModal])
+  }, [busquedaClienteModal, saleClients])
+
+  const invoiceTypeOptions = useMemo((): readonly SaleInvoiceTypeOption[] => {
+    return getSaleInvoiceTypeOptionsForSite(invoiceTypeSiteId)
+  }, [invoiceTypeSiteId])
+
+  const paymentMethodGroups = useMemo(() => {
+    const order = [
+      "cash",
+      "card_debit",
+      "card_credit",
+      "transfer",
+      "other",
+    ] as const
+    const sectionLabel: Record<(typeof order)[number], string> = {
+      cash: "Efectivo",
+      card_debit: "Débito",
+      card_credit: "Crédito",
+      transfer: "Transferencia",
+      other: "Otros",
+    }
+    const buckets: Record<string, SaleCatalogPaymentMethod[]> = {}
+    for (const k of order) buckets[k] = []
+    for (const m of salePaymentMethods) {
+      const k = order.includes(m.kind as (typeof order)[number])
+        ? (m.kind as (typeof order)[number])
+        : "other"
+      buckets[k].push(m)
+    }
+    return order
+      .filter((k) => buckets[k].length > 0)
+      .map((kind) => ({
+        kind,
+        title: sectionLabel[kind],
+        items: buckets[kind],
+      }))
+  }, [salePaymentMethods])
 
   const agregarAlCarrito = (productoId: string) => {
     setCarrito((prev) => {
@@ -522,12 +581,13 @@ function SalePage() {
   }
 
   const onClienteToolbarClick = () => {
+    if (!canReadClients) return
     setBusquedaClienteModal("")
     setClienteModalAbierto(true)
   }
 
-  const seleccionarCliente = (nombre: string) => {
-    setNombreCliente(nombre)
+  const seleccionarCliente = (c: SaleCatalogClient) => {
+    setClienteSeleccionado({ id: c.id, name: c.name })
     setClienteModalAbierto(false)
   }
 
@@ -640,6 +700,24 @@ function SalePage() {
     "h-10 bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-500 active:bg-emerald-700"
   const ventaDialogGhostBtn = "h-10 text-muted-foreground hover:text-foreground"
 
+  const headerUserName = useMemo(() => {
+    const meta = user?.user_metadata?.full_name
+    if (typeof meta === "string" && meta.trim()) return meta.trim()
+    return user?.email?.split("@")[0] || "Usuario"
+  }, [user?.email, user?.user_metadata?.full_name])
+
+  const userAvatarSrc =
+    user?.user_metadata?.avatar_url ||
+    `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.email || "u")}`
+
+  if (!popId) {
+    return (
+      <div className="min-h-screen bg-[#070a09] p-10 text-sm text-slate-300">
+        Punto de venta no encontrado
+      </div>
+    )
+  }
+
   return (
     <div className="relative h-screen overflow-hidden bg-[#070a09] text-white">
       <div className="pointer-events-none absolute inset-0">
@@ -652,7 +730,7 @@ function SalePage() {
           <div className="grid h-18 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 px-4">
             <div className="flex min-w-0 items-center gap-3">
               <Link
-                href="/1/menu"
+                href={popId ? `/${popId}/menu` : "/home"}
                 className="group inline-flex size-10 items-center justify-center rounded-xl border border-foreground/6 bg-secondary text-foreground/70 transition-all hover:border-foreground/12 hover:bg-muted hover:text-foreground"
                 aria-label="Volver"
               >
@@ -662,13 +740,13 @@ function SalePage() {
               <div className="flex min-w-0 items-center gap-2.5">
                 <div className="size-8 overflow-hidden rounded-lg ring-1 ring-border">
                   <img
-                    src="https://api.dicebear.com/7.x/shapes/svg?seed=store1&backgroundColor=1a1f1d"
-                    alt="Logo punto de venta"
+                    src={`https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(popId)}&backgroundColor=1a1f1d`}
+                    alt=""
                     className="size-full object-cover"
                   />
                 </div>
                 <span className="truncate text-sm font-semibold text-foreground/85">
-                  Nuevo Origen
+                  {popName || (catalogLoading ? "…" : "—")}
                 </span>
               </div>
             </div>
@@ -722,17 +800,19 @@ function SalePage() {
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <Avatar className="size-10 ring-1 ring-border">
-                    <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=francisco" />
-                    <AvatarFallback>FR</AvatarFallback>
+                    <AvatarImage src={userAvatarSrc} alt="" />
+                    <AvatarFallback className="bg-primary/10 text-xs text-primary">
+                      {headerUserName.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border border-card bg-primary" />
                 </div>
-                <div className="flex flex-col leading-tight">
-                  <span className="text-sm font-semibold text-foreground/85">
-                    Francisco Ruiz
+                <div className="hidden min-w-0 flex-col leading-tight sm:flex">
+                  <span className="truncate text-sm font-semibold text-foreground/85">
+                    {headerUserName}
                   </span>
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-meadow">
-                    Admin
+                    Ventas
                   </span>
                 </div>
               </div>
@@ -753,7 +833,7 @@ function SalePage() {
                       Categorías
                     </p>
                     <ul className="flex flex-col gap-0.5 p-0" role="list">
-                      {CATEGORIAS.map((cat) => {
+                      {categoriasNav.map((cat) => {
                         const seleccionado =
                           vistaCatalogo.modo === "categoria" &&
                           vistaCatalogo.categoria === cat
@@ -911,12 +991,28 @@ function SalePage() {
                 <div
                   className={cn(
                     "min-h-0",
-                    productosFiltrados.length === 0
-                      ? "relative overflow-hidden p-0"
-                      : "game-scroll overflow-y-auto p-3",
+                    catalogLoading && !catalogError
+                      ? "flex flex-1 flex-col p-6"
+                      : catalogError
+                        ? "flex flex-1 flex-col p-6"
+                        : productosFiltrados.length === 0
+                          ? "relative overflow-hidden p-0"
+                          : "game-scroll overflow-y-auto p-3",
                   )}
                 >
-                  {productosFiltrados.length === 0 ? (
+                  {catalogLoading && !catalogError ? (
+                    <div className="flex min-h-[200px] flex-1 items-center justify-center">
+                      <p className="text-sm text-slate-400">
+                        Cargando productos…
+                      </p>
+                    </div>
+                  ) : catalogError ? (
+                    <div className="flex min-h-[200px] flex-1 flex-col items-center justify-center gap-2 text-center">
+                      <p className="max-w-md text-sm text-rose-300">
+                        {catalogError}
+                      </p>
+                    </div>
+                  ) : productosFiltrados.length === 0 ? (
                     <div
                       aria-live="polite"
                       className="rootsy-hero-slide-in-right pointer-events-none absolute right-[-50px] bottom-[-25px] z-10"
@@ -1057,15 +1153,21 @@ function SalePage() {
             >
               <button
                 type="button"
+                disabled={!canReadClients}
                 onClick={onClienteToolbarClick}
-                className={toolboxSlotClass(Boolean(nombreCliente))}
+                className={cn(
+                  toolboxSlotClass(Boolean(clienteSeleccionado)),
+                  !canReadClients && "opacity-45",
+                )}
                 aria-label={
-                  nombreCliente
-                    ? `Cliente: ${nombreCliente}. Abrir para cambiar.`
-                    : "Cliente sin elegir. Abrir para seleccionar."
+                  !canReadClients
+                    ? "No tenés permiso para ver clientes. Pedí acceso de lectura en tu rol."
+                    : clienteSeleccionado
+                      ? `Cliente: ${clienteSeleccionado.name}. Abrir para cambiar.`
+                      : "Cliente sin elegir. Abrir para seleccionar."
                 }
               >
-                <span className={toolboxIconWrap(Boolean(nombreCliente))}>
+                <span className={toolboxIconWrap(Boolean(clienteSeleccionado))}>
                   <User className="size-4.5 sm:size-5" aria-hidden />
                 </span>
                 <span className="min-w-0 flex-1">
@@ -1075,10 +1177,14 @@ function SalePage() {
                   <span
                     className={cn(
                       "block truncate text-sm font-semibold leading-snug",
-                      nombreCliente ? "text-foreground" : "text-foreground/55",
+                      clienteSeleccionado
+                        ? "text-foreground"
+                        : "text-foreground/55",
                     )}
                   >
-                    {nombreCliente ?? "Elegir cliente"}
+                    {!canReadClients
+                      ? "Sin permiso"
+                      : (clienteSeleccionado?.name ?? "Elegir cliente")}
                   </span>
                 </span>
               </button>
@@ -1111,15 +1217,26 @@ function SalePage() {
               </button>
               <button
                 type="button"
-                onClick={() => setPagoModalAbierto(true)}
-                className={toolboxSlotClass(Boolean(metodoPago))}
+                disabled={!canReadPaymentMethods}
+                onClick={() => {
+                  if (!canReadPaymentMethods) return
+                  setPagoModalAbierto(true)
+                }}
+                className={cn(
+                  toolboxSlotClass(Boolean(metodoPagoSeleccionado)),
+                  !canReadPaymentMethods && "opacity-45",
+                )}
                 aria-label={
-                  metodoPago
-                    ? `Pago: ${metodoPago}. Abrir para cambiar.`
-                    : "Medio de pago sin elegir. Abrir para seleccionar."
+                  !canReadPaymentMethods
+                    ? "No tenés permiso para ver medios de pago. Pedí acceso de lectura en tu rol."
+                    : metodoPagoSeleccionado
+                      ? `Pago: ${metodoPagoSeleccionado.label}. Abrir para cambiar.`
+                      : "Medio de pago sin elegir. Abrir para seleccionar."
                 }
               >
-                <span className={toolboxIconWrap(Boolean(metodoPago))}>
+                <span
+                  className={toolboxIconWrap(Boolean(metodoPagoSeleccionado))}
+                >
                   <Banknote className="size-4.5 sm:size-5" aria-hidden />
                 </span>
                 <span className="min-w-0 flex-1">
@@ -1129,10 +1246,14 @@ function SalePage() {
                   <span
                     className={cn(
                       "block truncate text-sm font-semibold leading-snug",
-                      metodoPago ? "text-foreground" : "text-foreground/55",
+                      metodoPagoSeleccionado
+                        ? "text-foreground"
+                        : "text-foreground/55",
                     )}
                   >
-                    {metodoPago ?? "Elegir medio"}
+                    {!canReadPaymentMethods
+                      ? "Sin permiso"
+                      : (metodoPagoSeleccionado?.label ?? "Elegir medio")}
                   </span>
                 </span>
               </button>
@@ -1569,15 +1690,15 @@ function SalePage() {
                   No hay resultados para esa búsqueda.
                 </li>
               ) : (
-                clientesFiltradosModal.map((nombre) => {
-                  const seleccionado = nombreCliente === nombre
+                clientesFiltradosModal.map((c) => {
+                  const seleccionado = clienteSeleccionado?.id === c.id
                   return (
-                    <li key={nombre}>
+                    <li key={c.id}>
                       <button
                         type="button"
                         role="option"
                         aria-selected={seleccionado}
-                        onClick={() => seleccionarCliente(nombre)}
+                        onClick={() => seleccionarCliente(c)}
                         className={cn(
                           "flex min-h-11 w-full items-center gap-3 text-left",
                           modalOpcionBase,
@@ -1587,7 +1708,7 @@ function SalePage() {
                         )}
                       >
                         <User className="size-5 shrink-0 text-primary" aria-hidden />
-                        <span className="min-w-0 font-medium">{nombre}</span>
+                        <span className="min-w-0 font-medium">{c.name}</span>
                       </button>
                     </li>
                   )
@@ -1595,14 +1716,14 @@ function SalePage() {
               )}
             </ul>
           </div>
-          {nombreCliente ? (
+          {clienteSeleccionado ? (
             <DialogFooter className={ventaDialogFooter}>
               <Button
                 type="button"
                 variant="ghost"
                 className={ventaDialogGhostBtn}
                 onClick={() => {
-                  setNombreCliente(null)
+                  setClienteSeleccionado(null)
                   setClienteModalAbierto(false)
                 }}
               >
@@ -1632,15 +1753,16 @@ function SalePage() {
               role="listbox"
               aria-label="Tipos de comprobante"
             >
-              {COMPROBANTES_OPCIONES.map((c) => {
-                const seleccionado = comprobante === c
+              {invoiceTypeOptions.map((opt) => {
+                const label = opt.label
+                const seleccionado = comprobante === label
                 return (
-                  <li key={c}>
+                  <li key={label}>
                     <button
                       type="button"
                       role="option"
                       aria-selected={seleccionado}
-                      onClick={() => setComprobante(c)}
+                      onClick={() => setComprobante(label)}
                       className={cn(
                         "min-h-11 w-full text-left",
                         modalOpcionBase,
@@ -1649,11 +1771,11 @@ function SalePage() {
                           : modalOpcionIdle,
                       )}
                     >
-                      <span className="block text-sm font-semibold">{c}</span>
+                      <span className="block text-sm font-semibold">{label}</span>
                     </button>
-                    {c === "Recibo X" ? (
+                    {opt.note ? (
                       <p className="mt-1.5 px-1 text-xs leading-snug text-muted-foreground">
-                        No requiere ARCA
+                        {opt.note}
                       </p>
                     ) : null}
                   </li>
@@ -1691,88 +1813,70 @@ function SalePage() {
               Método de pago
             </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed">
-              Elegí efectivo o una tarjeta por débito o crédito.
+              Elegí un medio configurado para este punto de venta (efectivo,
+              tarjetas, transferencia u otros).
             </DialogDescription>
           </DialogHeader>
           <div className={cn(ventaDialogBody, "max-h-[min(70vh,28rem)] space-y-4 overflow-y-auto")}>
-            <button
-              type="button"
-              className={cn(
-                "min-h-11 w-full text-left font-semibold",
-                modalOpcionBase,
-                metodoPago === "Efectivo"
-                  ? modalOpcionSeleccionada
-                  : modalOpcionIdle,
-              )}
-              onClick={() => {
-                setMetodoPago("Efectivo")
-                setPagoModalAbierto(false)
-              }}
-            >
-              Efectivo
-            </button>
-            <Separator className="bg-border/60" />
-            <div>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                Débito
+            {paymentMethodGroups.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-border/60 bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+                No hay medios de pago activos configurados para este punto de
+                venta.
               </p>
-              <div className="grid grid-cols-2 gap-2">
-                {TARJETAS_DEBITO.map((t) => {
-                  const valor = `Débito · ${t}`
-                  const seleccionado = metodoPago === valor
-                  return (
-                    <button
-                      key={`deb-${t}`}
-                      type="button"
-                      className={cn(
-                        "min-h-11 min-w-0 px-3 py-2.5 text-center text-sm font-medium",
-                        modalOpcionBase,
-                        seleccionado
-                          ? modalOpcionSeleccionada
-                          : modalOpcionIdle,
-                      )}
-                      onClick={() => {
-                        setMetodoPago(valor)
-                        setPagoModalAbierto(false)
-                      }}
-                    >
-                      <span className="block w-full truncate">{t}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-            <Separator className="bg-border/60" />
-            <div>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                Crédito
-              </p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                {TARJETAS_CREDITO.map((t) => {
-                  const valor = `Crédito · ${t}`
-                  const seleccionado = metodoPago === valor
-                  return (
-                    <button
-                      key={`cred-${t}`}
-                      type="button"
-                      className={cn(
-                        "min-h-11 min-w-0 px-3 py-2.5 text-center text-sm font-medium",
-                        modalOpcionBase,
-                        seleccionado
-                          ? modalOpcionSeleccionada
-                          : modalOpcionIdle,
-                      )}
-                      onClick={() => {
-                        setMetodoPago(valor)
-                        setPagoModalAbierto(false)
-                      }}
-                    >
-                      <span className="block w-full truncate">{t}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+            ) : (
+              paymentMethodGroups.map((g, gi) => (
+                <div key={g.kind}>
+                  {gi > 0 ? (
+                    <Separator className="mb-4 bg-border/60" />
+                  ) : null}
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    {g.title}
+                  </p>
+                  <div
+                    className={cn(
+                      "gap-2",
+                      g.kind === "cash"
+                        ? "flex flex-col"
+                        : "grid grid-cols-2 sm:grid-cols-3",
+                    )}
+                  >
+                    {g.items.map((m) => {
+                      const seleccionado = metodoPagoSeleccionado?.id === m.id
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          className={cn(
+                            "min-h-11 min-w-0 px-3 py-2.5 text-center text-sm font-medium",
+                            modalOpcionBase,
+                            g.kind === "cash" && "w-full text-left text-base",
+                            seleccionado
+                              ? modalOpcionSeleccionada
+                              : modalOpcionIdle,
+                          )}
+                          onClick={() => {
+                            setMetodoPagoSeleccionado({
+                              id: m.id,
+                              label: m.name,
+                            })
+                            setPagoModalAbierto(false)
+                          }}
+                        >
+                          <span
+                            className={cn(
+                              "block w-full",
+                              g.kind === "cash" ? "truncate" : "truncate",
+                            )}
+                          >
+                            {m.name}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
           <DialogFooter className={ventaDialogFooter}>
             <Button
@@ -1780,7 +1884,7 @@ function SalePage() {
               variant="ghost"
               className={ventaDialogGhostBtn}
               onClick={() => {
-                setMetodoPago(null)
+                setMetodoPagoSeleccionado(null)
                 setPagoModalAbierto(false)
               }}
             >

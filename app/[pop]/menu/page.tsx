@@ -37,13 +37,13 @@ import {
   Bell,
   Banknote,
   Archive,
-  Building2,
   UserCog,
   Printer,
   Cog,
   X,
   MapPin,
   Home,
+  Landmark,
 } from "lucide-react"
 
 export type MenuItemLink =
@@ -51,6 +51,10 @@ export type MenuItemLink =
   | "settings"
   | "hr"
   | "articles"
+  | "clients"
+  | "payment-methods"
+  | "accounting"
+  | "cash-registers"
   | "section"
 
 type MenuItemDef = {
@@ -75,7 +79,7 @@ const menuSectionsRaw: Record<string, MenuSectionDef> = {
       { name: "Comprar", icon: ShoppingBag, link: "section" },
       { name: "Fabricación", icon: Factory, link: "section" },
       { name: "Stock", icon: Package, badge: "3", link: "articles" },
-      { name: "Clientes", icon: Users, link: "section" },
+      { name: "Clientes", icon: Users, link: "clients" },
       { name: "Proveedores", icon: Truck, link: "section" },
       { name: "Cuentas Ctes", icon: CreditCard, link: "section" },
       { name: "Promociones", icon: Sparkles, badge: "5", link: "section" },
@@ -103,9 +107,9 @@ const menuSectionsRaw: Record<string, MenuSectionDef> = {
     items: [
       { name: "Mensajes", icon: MessageSquare, link: "section" },
       { name: "Alertas", icon: Bell, badge: "8", link: "section" },
-      { name: "Pagos", icon: Banknote, link: "section" },
-      { name: "Cajas", icon: Archive, link: "section" },
-      { name: "Cuentas", icon: Building2, link: "section" },
+      { name: "Pagos", icon: Banknote, link: "payment-methods" },
+      { name: "Cajas", icon: Archive, link: "cash-registers" },
+      { name: "Contabilidad", icon: Landmark, link: "accounting" },
       { name: "RRHH", icon: UserCog, link: "hr" },
       { name: "Impresora", icon: Printer, link: "section" },
       { name: "Ajustes", icon: Cog, link: "settings" },
