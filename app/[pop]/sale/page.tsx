@@ -1772,6 +1772,10 @@ function SalePage() {
                       )}
                     >
                       <span className="block text-sm font-semibold">{label}</span>
+                      <span className="mt-0.5 block font-mono text-[11px] text-muted-foreground">
+                        ARCA · CbteTipo {opt.arcaCbteTipo}
+                        {opt.arcaRegimen === "fce_mipyme" ? " · FCE MiPyME" : ""}
+                      </span>
                     </button>
                     {opt.note ? (
                       <p className="mt-1.5 px-1 text-xs leading-snug text-muted-foreground">

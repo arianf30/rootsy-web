@@ -17,6 +17,8 @@ export function getMenuResourceAction(
     return { resource: "accounts", action: "read" }
   if (menuLink === "cash-registers")
     return { resource: "cash_registers", action: "read" }
+  if (menuLink === "inventory")
+    return { resource: "inventory", action: "read" }
   return null
 }
 

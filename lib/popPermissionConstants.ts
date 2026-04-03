@@ -30,6 +30,11 @@ export const POP_PERMS = {
   CASH_REGISTER_CREATE: { resource: "cash_registers", action: "create" },
   CASH_REGISTER_UPDATE: { resource: "cash_registers", action: "update" },
   CASH_REGISTER_DELETE: { resource: "cash_registers", action: "delete" },
+
+  INVENTORY_READ: { resource: "inventory", action: "read" },
+  INVENTORY_CREATE: { resource: "inventory", action: "create" },
+  INVENTORY_UPDATE: { resource: "inventory", action: "update" },
+  INVENTORY_DELETE: { resource: "inventory", action: "delete" },
 } as const
 
 export function permissionKeysInclude(

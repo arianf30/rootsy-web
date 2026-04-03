@@ -55,6 +55,7 @@ export type MenuItemLink =
   | "payment-methods"
   | "accounting"
   | "cash-registers"
+  | "inventory"
   | "section"
 
 type MenuItemDef = {
@@ -94,7 +95,7 @@ const menuSectionsRaw: Record<string, MenuSectionDef> = {
       { name: "Estadísticas", icon: PieChart, link: "section" },
       { name: "Operaciones", icon: Activity, link: "section" },
       { name: "Movimientos", icon: ArrowLeftRight, link: "section" },
-      { name: "Inventario", icon: ClipboardList, link: "section" },
+      { name: "Inventario", icon: ClipboardList, link: "inventory" },
       { name: "Gastos", icon: Receipt, link: "section" },
       { name: "Facturas", icon: FileBarChart, badge: "2", link: "section" },
       { name: "Reportes", icon: FileCheck, link: "section" },
