@@ -17,6 +17,7 @@ import {
   DsFoundationTypefaces,
   DsFoundationTypeScale,
 } from "@/components/office/ds-foundations"
+import { DsLucideGallery } from "@/components/office/ds-lucide-gallery"
 import {
   DesignTile,
   DsSection,
@@ -78,6 +79,7 @@ const toc = [
   { href: "#intro", label: "Intro" },
   { href: "#foundation-colors", label: "Paleta" },
   { href: "#foundation-type", label: "Tipografía" },
+  { href: "#foundation-icons", label: "Íconos" },
   { href: "#atoms-buttons", label: "Botones" },
   { href: "#atoms-fields", label: "Campos" },
   { href: "#atoms-badges", label: "Insignias" },
@@ -182,6 +184,15 @@ export function DesignSystemView() {
               </p>
               <DsFoundationTypeScale />
             </div>
+          </DsSection>
+
+          <DsSection
+            id="foundation-icons"
+            eyebrow="Fundamentos"
+            title="Íconos (Lucide)"
+            description="Catálogo explorado con lucide-react: buscador local, copia de uso con DynamicIcon y enlace a cada glifo en lucide.dev. Incluye pistas en español para acercarte a nombres en inglés del set."
+          >
+            <DsLucideGallery />
           </DsSection>
 
           <DsSection
