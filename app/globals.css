@@ -417,7 +417,24 @@
     );
   }
 
+  @keyframes rootsy-dock-wiggle {
+    0%,
+    100% {
+      transform: rotate(-1.2deg);
+    }
+    50% {
+      transform: rotate(1.2deg);
+    }
+  }
+
+  .rootsy-dock-edit-wiggle {
+    animation: rootsy-dock-wiggle 0.38s ease-in-out infinite;
+  }
+
   @media (prefers-reduced-motion: reduce) {
+    .rootsy-dock-edit-wiggle {
+      animation: none;
+    }
     .rootsy-ambient-pulse {
       animation: none;
     }

@@ -1,4 +1,7 @@
+"use client"
+
 import Link from "next/link"
+import { useState } from "react"
 import {
   Download,
   HelpCircle,
@@ -8,6 +11,8 @@ import {
   Plus,
   UserCog,
 } from "lucide-react"
+
+import { EditProfileDialog } from "@/components/home/edit-profile-dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -46,6 +51,8 @@ const SUCURSALES = [
 ] as const
 
 export default function HomePage() {
+  const [perfilAbierto, setPerfilAbierto] = useState(false)
+
   return (
     <div className="relative h-screen overflow-hidden bg-[#070a09] text-white">
       <div className="pointer-events-none absolute inset-0">
@@ -82,7 +89,10 @@ export default function HomePage() {
                 align="end"
                 className="min-w-48 border-white/14 bg-[#111716]/96 text-white shadow-[0_18px_40px_-24px_rgba(0,0,0,0.8)] backdrop-blur-xl"
               >
-                <DropdownMenuItem className="cursor-pointer gap-2.5 text-white/90 focus:bg-white/10 focus:text-white">
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2.5 text-white/90 focus:bg-white/10 focus:text-white"
+                  onSelect={() => setPerfilAbierto(true)}
+                >
                   <UserCog className="size-4 text-white/70" />
                   Editar perfil
                 </DropdownMenuItem>
@@ -181,6 +191,8 @@ export default function HomePage() {
           </Button>
         </div>
       </main>
+
+      <EditProfileDialog open={perfilAbierto} onOpenChange={setPerfilAbierto} />
     </div>
   )
 }
