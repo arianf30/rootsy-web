@@ -1,11 +1,20 @@
 "use client"
 
 import Link from "next/link"
-import { ChevronDown, LayoutDashboard, Palette, Plus, User } from "lucide-react"
+import { useState } from "react"
+import {
+  ChevronDown,
+  ImagePlus,
+  LayoutDashboard,
+  Palette,
+  Plus,
+  User,
+} from "lucide-react"
 
 import { PopSaleHeader } from "@/components/pop/pop-sale-header"
 import {
   DsFoundationColors,
+  DsFoundationTypefaces,
   DsFoundationTypeScale,
 } from "@/components/office/ds-foundations"
 import {
@@ -55,6 +64,14 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { FORM_CONTROL_MD, FORM_LABEL_UPPER } from "@/lib/form-controls"
 import { cn } from "@/lib/utils"
 
 const toc = [
@@ -76,6 +93,9 @@ const ventaDialogGhostBtn =
   "h-10 text-muted-foreground hover:text-foreground"
 
 export function DesignSystemView() {
+  const [dsSelectMd, setDsSelectMd] = useState("chaco")
+  const [dsSelectDefault, setDsSelectDefault] = useState("a")
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <header id="intro" className="mb-12 max-w-2xl scroll-mt-24">
@@ -148,13 +168,20 @@ export function DesignSystemView() {
           <DsSection
             id="foundation-type"
             eyebrow="Fundamentos"
-            title="Escala tipográfica"
-            description="Clases de tamaño de Tailwind usadas en la app. Tamaños e interlineado alineados a la tabla de font-size de la documentación de Tailwind v4."
+            title="Tipografía"
+            description="Familias cargadas con Next (Nunito para toda la UI, Geist Mono para monoespaciado) y escala de tamaños con utilidades Tailwind alineadas a la tabla font-size de la documentación de Tailwind v4."
           >
-            <DsFoundationTypeScale />
-            <p className="text-xs text-muted-foreground">
-              Familia: Nunito (sans). Monoespaciada en código: Geist Mono.
-            </p>
+            <DsFoundationTypefaces />
+            <div className="mt-8 space-y-3">
+              <h3 className="text-base font-semibold tracking-tight">
+                Escala tipográfica
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Clases <span className="font-mono text-xs">text-*</span> e
+                interlineado como referencia para diseño y código.
+              </p>
+              <DsFoundationTypeScale />
+            </div>
           </DsSection>
 
           <DsSection
@@ -283,17 +310,130 @@ export function DesignSystemView() {
           <DsSection
             id="atoms-fields"
             eyebrow="Átomos"
-            title="Campos y separador"
+            title="Campos, lista y separador"
+            description="En grillas de formulario, Input y Select comparten altura usando el tamaño md del disparador y la clase compartida formControlMd (ver lib/form-controls.ts)."
           >
-            <DsVariantPanel title="Campo de texto" description="Input estándar.">
-              <DsVariantCell label="input" sublabel="placeholder">
-                <Input className="max-w-[220px]" placeholder="Ejemplo" />
+            <DsVariantPanel
+              title="Input · altura"
+              description="default (h-9) en login y formularios simples; md (h-11) alineado con Select en modales."
+            >
+              <DsVariantCell label="default" sublabel="h-9">
+                <Input className="max-w-[200px]" placeholder="Texto" />
+              </DsVariantCell>
+              <DsVariantCell label="md + formControlMd" sublabel="h-11">
+                <Input
+                  className={cn(FORM_CONTROL_MD, "max-w-[200px]")}
+                  placeholder="Texto"
+                />
+              </DsVariantCell>
+              <DsVariantCell label="disabled" sublabel="md">
+                <Input
+                  className={cn(FORM_CONTROL_MD, "max-w-[200px]")}
+                  disabled
+                  placeholder="Deshabilitado"
+                />
+              </DsVariantCell>
+            </DsVariantPanel>
+
+            <DsVariantPanel
+              title="Select · tamaño del disparador"
+              description="sm y default para UI compacta; md = misma altura que input md en la misma fila."
+            >
+              <DsVariantCell label="sm" sublabel="h-8">
+                <Select value={dsSelectDefault} onValueChange={setDsSelectDefault}>
+                  <SelectTrigger size="sm" className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="a">Opción A</SelectItem>
+                    <SelectItem value="b">Opción B</SelectItem>
+                  </SelectContent>
+                </Select>
+              </DsVariantCell>
+              <DsVariantCell label="default" sublabel="h-9">
+                <Select value={dsSelectDefault} onValueChange={setDsSelectDefault}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="a">Opción A</SelectItem>
+                    <SelectItem value="b">Opción B</SelectItem>
+                  </SelectContent>
+                </Select>
+              </DsVariantCell>
+              <DsVariantCell label="md" sublabel="h-11">
+                <Select value={dsSelectMd} onValueChange={setDsSelectMd}>
+                  <SelectTrigger size="md" className={cn(FORM_CONTROL_MD, "w-[160px]")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="chaco">Chaco</SelectItem>
+                    <SelectItem value="cba">Córdoba</SelectItem>
+                  </SelectContent>
+                </Select>
               </DsVariantCell>
             </DsVariantPanel>
 
             <DesignTile
-              name="Etiqueta + campo"
-              where="Login, registro, recuperar contraseña, modales POS."
+              name="Fila · input + select + input (md)"
+              where="Mi perfil y futuros modales con columnas mixtas."
+            >
+              <div className="grid w-full max-w-3xl gap-5 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <span className={FORM_LABEL_UPPER}>Campo A</span>
+                  <Input className={FORM_CONTROL_MD} defaultValue="Texto" />
+                </div>
+                <div className="space-y-2">
+                  <span className={FORM_LABEL_UPPER}>Lista</span>
+                  <Select value={dsSelectMd} onValueChange={setDsSelectMd}>
+                    <SelectTrigger size="md" className={FORM_CONTROL_MD}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="chaco">Chaco</SelectItem>
+                      <SelectItem value="cba">Córdoba</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <span className={FORM_LABEL_UPPER}>Campo B</span>
+                  <Input className={FORM_CONTROL_MD} defaultValue="Misma altura" />
+                </div>
+              </div>
+            </DesignTile>
+
+            <DesignTile
+              name="Etiqueta · mayúsculas (formulario modal)"
+              where="Perfil, POS — FORM_LABEL_UPPER."
+            >
+              <div className="flex w-full max-w-xs flex-col gap-2">
+                <Label htmlFor="ds-label-upper" className={FORM_LABEL_UPPER}>
+                  Etiqueta
+                </Label>
+                <Input id="ds-label-upper" className={FORM_CONTROL_MD} placeholder="Valor" />
+              </div>
+            </DesignTile>
+
+            <DesignTile
+              name="Acción · texto + icono (sin padding lateral)"
+              where="Cambiar foto en Mi perfil — alineado al bloque de nombre y correo."
+            >
+              <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
+                <p className="text-sm font-semibold">Nombre visible</p>
+                <p className="text-xs text-muted-foreground">correo@ejemplo.com</p>
+                <button
+                  type="button"
+                  className="mt-2.5 inline-flex items-center gap-2 p-0 text-sm font-medium text-primary"
+                >
+                  <ImagePlus className="size-4" aria-hidden />
+                  Cambiar foto
+                </button>
+              </div>
+            </DesignTile>
+
+            <DesignTile
+              name="Etiqueta + campo (cuerpo estándar)"
+              where="Login, registro, recuperar contraseña."
             >
               <div className="flex w-full max-w-xs flex-col gap-2">
                 <Label htmlFor="ds-label-demo">Etiqueta</Label>

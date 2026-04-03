@@ -138,6 +138,50 @@ const TYPE_SCALE = [
   },
 ] as const
 
+export function DsFoundationTypefaces() {
+  return (
+    <div className="space-y-6 rounded-xl border border-border bg-card/40 p-4 sm:p-6">
+      <div className="space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Sans · interfaz (font-sans)
+        </p>
+        <p className="font-sans text-2xl font-semibold tracking-tight">
+          Nunito — Ábaco verde 123
+        </p>
+        <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
+          <span className="font-mono text-[11px] text-foreground">Nunito</span> se carga con{" "}
+          <span className="font-mono text-[11px]">next/font/google</span> en{" "}
+          <span className="font-mono text-[11px]">app/layout.tsx</span>
+          (subset latin, pesos 400, 500, 600, 700, 800). El{" "}
+          <span className="font-mono text-[11px]">&lt;body&gt;</span> aplica{" "}
+          <span className="font-mono text-[11px]">font-sans</span> y las variables{" "}
+          <span className="font-mono text-[11px]">--font-nunito</span> y{" "}
+          <span className="font-mono text-[11px]">--font-geist-mono</span>. En el tema (
+          <span className="font-mono text-[11px]">app/globals.css</span>,{" "}
+          <span className="font-mono text-[11px]">@theme inline</span>){" "}
+          <span className="font-mono text-[11px]">--font-sans</span> resuelve a esa familia con
+          respaldo <span className="font-mono text-[11px]">sans-serif</span>.
+        </p>
+      </div>
+      <div className="space-y-2 border-t border-border/60 pt-6">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Mono · código (font-mono)
+        </p>
+        <p className="font-mono text-sm text-foreground">
+          Geist Mono — const sku = &quot;POS-2048&quot;
+        </p>
+        <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
+          <span className="font-mono text-[11px] text-foreground">Geist Mono</span> también viene de{" "}
+          <span className="font-mono text-[11px]">next/font/google</span>;{" "}
+          <span className="font-mono text-[11px]">--font-mono</span> en el tema usa{" "}
+          <span className="font-mono text-[11px]">var(--font-geist-mono)</span> con fallback{" "}
+          <span className="font-mono text-[11px]">ui-monospace</span>.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function DsFoundationColors() {
   return (
     <div className="divide-y divide-border/60 rounded-xl border border-border bg-card/40 px-4 sm:px-6">
