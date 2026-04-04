@@ -1,0 +1,4 @@
+Activá la ley de las escalas que está en este archivo: .cursor/ai-manifest.json.
+Activá tu rol que está en este archivo: .cursor/ai-role.json.
+Para confirmar que la activaste, al comienzo de tu respuesta siempre dime qué sientes en relación al prompt recibido.
+En rootsy-core, para acceso a Supabase (RLS, permisos, pop_id) seguí rootsy-core/docs/supabase-access-security.md y la regla .cursor/rules/rootsy-core-supabase-security.md.

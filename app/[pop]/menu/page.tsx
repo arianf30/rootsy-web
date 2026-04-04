@@ -135,17 +135,26 @@ function popMenuWallpaperFixedStyle(wallpaperSrc: string): CSSProperties {
   }
 }
 
+/**
+ * Saturación de la foto (misma en fondo de página, panel y overlay enmascarado).
+ * 0.62 calma el color para que no compita con la UI.
+ */
+const POP_MENU_WALLPAPER_SATURATE = 0.62
+
 /** Velo #000 al 80% sobre la foto (página, panel y overlay enmascarado). */
 const POP_MENU_WALLPAPER_SCRIM_OPACITY_CLASS = "bg-black/80"
 
-/** Imagen + velo (mismo stack en página, panel y overlay enmascarado). */
+/** Imagen (desaturada) + velo (mismo stack en página, panel y overlay enmascarado). */
 function PopMenuWallpaperWithScrim({ wallpaperSrc }: { wallpaperSrc: string }) {
   return (
     <>
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 z-0"
-        style={popMenuWallpaperFixedStyle(wallpaperSrc)}
+        style={{
+          ...popMenuWallpaperFixedStyle(wallpaperSrc),
+          filter: `saturate(${POP_MENU_WALLPAPER_SATURATE})`,
+        }}
       />
       <div
         aria-hidden
