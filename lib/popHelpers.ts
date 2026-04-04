@@ -1,5 +1,6 @@
 "use server"
 
+import { siteIdFromPopRow, siteIdFromPopSettings } from "@/lib/popRoutes"
 import { createClient } from "@/utils/supabase/server"
 import { requireAuthenticatedUser } from "@/lib/authHelpers"
 
@@ -43,7 +44,7 @@ export async function getPopById(popId: string, options?: GetPopByIdOptions) {
     const { data: pop, error: popError } = await supabase
       .from("pops")
       .select(
-        "id, name, image_url, settings, owner_user_id, business_type_id, country, state, city, street_address, postal_code, phone, background_image_url, invoice_logo_url",
+        "id, name, image_url, site_id, settings, owner_user_id, business_type_id, country, state, city, street_address, postal_code, phone, background_image_url, invoice_logo_url",
       )
       .eq("id", popId)
       .single()
@@ -69,6 +70,10 @@ export async function getPopById(popId: string, options?: GetPopByIdOptions) {
     const base = {
       id: pop.id,
       name: pop.name,
+      siteId: siteIdFromPopRow({
+        site_id: pop.site_id as string | null | undefined,
+        settings: pop.settings,
+      }),
       imageUrl: pop.image_url,
       address,
       country: pop.country ?? null,
@@ -150,5 +155,30 @@ export async function validatePopAccess(popId: string): Promise<{
       isActive: false,
       error: "Error al validar acceso al POP",
     }
+  }
+}
+
+export async function getPopSiteId(popId: string): Promise<string> {
+  try {
+    const user = await requireAuthenticatedUser()
+    const supabase = await createClient()
+    const { data: hasAccess } = await supabase.rpc("user_has_pop_access", {
+      pop_id: popId,
+      user_id: user.uid,
+    })
+    if (!hasAccess) {
+      return siteIdFromPopSettings(undefined)
+    }
+    const { data } = await supabase
+      .from("pops")
+      .select("site_id, settings")
+      .eq("id", popId)
+      .maybeSingle()
+    return siteIdFromPopRow({
+      site_id: data?.site_id as string | null | undefined,
+      settings: data?.settings,
+    })
+  } catch {
+    return siteIdFromPopSettings(undefined)
   }
 }

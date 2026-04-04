@@ -26,6 +26,11 @@ export const POP_PERMS = {
   PAYMENT_METHOD_UPDATE: { resource: "payment_methods", action: "update" },
   PAYMENT_METHOD_DELETE: { resource: "payment_methods", action: "delete" },
 
+  PRINTER_READ: { resource: "printers", action: "read" },
+  PRINTER_CREATE: { resource: "printers", action: "create" },
+  PRINTER_UPDATE: { resource: "printers", action: "update" },
+  PRINTER_DELETE: { resource: "printers", action: "delete" },
+
   CASH_REGISTER_READ: { resource: "cash_registers", action: "read" },
   CASH_REGISTER_CREATE: { resource: "cash_registers", action: "create" },
   CASH_REGISTER_UPDATE: { resource: "cash_registers", action: "update" },

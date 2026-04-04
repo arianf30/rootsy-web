@@ -1,6 +1,7 @@
 "use server"
 
 import { requireAuthenticatedUser } from "@/lib/authHelpers"
+import { siteIdFromPopRow } from "@/lib/popRoutes"
 import { createClient } from "@/utils/supabase/server"
 
 export type UserProfileDTO = {
@@ -29,6 +30,7 @@ export type UserProfileDTO = {
 
 export type UserPopListItem = {
   id: string
+  siteId: string
   name: string
   imageUrl: string | null
   roleId: string
@@ -200,8 +202,25 @@ export async function getUserPops(): Promise<UserPopListItem[]> {
       return []
     }
 
+    const accRows = accessiblePops as AccessiblePopRow[]
+    const popIds = accRows.map((p) => p.pop_id)
+    const { data: popSettingsRows } = await supabase
+      .from("pops")
+      .select("id, site_id, settings")
+      .in("id", popIds)
+    const siteByPopId = new Map<string, string>()
+    for (const row of popSettingsRows || []) {
+      siteByPopId.set(
+        String(row.id),
+        siteIdFromPopRow({
+          site_id: row.site_id as string | null | undefined,
+          settings: row.settings,
+        }),
+      )
+    }
+
     const popsWithSubscription = await Promise.all(
-      (accessiblePops as AccessiblePopRow[]).map(async (pop) => {
+      accRows.map(async (pop) => {
         try {
           const { data: subscriptionInfo, error: subscriptionError } =
             await supabase.rpc("get_pop_subscription_info", {
@@ -215,6 +234,9 @@ export async function getUserPops(): Promise<UserPopListItem[]> {
           ) {
             return {
               id: pop.pop_id,
+              siteId:
+                siteByPopId.get(pop.pop_id) ??
+                siteIdFromPopRow({ site_id: null, settings: undefined }),
               name: pop.pop_name,
               imageUrl: null,
               roleId: pop.role_id,
@@ -228,6 +250,9 @@ export async function getUserPops(): Promise<UserPopListItem[]> {
 
           return {
             id: pop.pop_id,
+            siteId:
+                siteByPopId.get(pop.pop_id) ??
+                siteIdFromPopRow({ site_id: null, settings: undefined }),
             name: pop.pop_name,
             imageUrl: null,
             roleId: pop.role_id,
@@ -256,6 +281,9 @@ export async function getUserPops(): Promise<UserPopListItem[]> {
         } catch {
           return {
             id: pop.pop_id,
+            siteId:
+                siteByPopId.get(pop.pop_id) ??
+                siteIdFromPopRow({ site_id: null, settings: undefined }),
             name: pop.pop_name,
             imageUrl: null,
             roleId: pop.role_id,

@@ -43,11 +43,11 @@ const supabase = createClient()
 | Server actions / handlers | `lib/authHelpers.ts` — `requireAuthenticatedUser()`, `getAuthenticatedUserOrNull()` |
 | OAuth (Google, etc.) | `app/auth/callback/route.ts` — `exchangeCodeForSession` |
 
-**Rutas de auth (solo estas páginas en la app):** `/login`, `/register`, `/recuperar-contrasena`. El handler **`/auth/callback`** no es una página; intercambia el `code` (OAuth o enlace de recuperación) y redirige al `next` interno (solo paths que empiezan con `/`).
+**Rutas de auth (solo estas páginas en la app):** `/login`, `/register`, `/recovery-password`. El handler **`/auth/callback`** no es una página; intercambia el `code` (OAuth o enlace de recuperación) y redirige al `next` interno (solo paths que empiezan con `/`).
 
-**Recuperar contraseña:** el correo debe apuntar al callback con `next` hacia `/recuperar-contrasena?paso=nueva` (ya configurado en `resetPasswordForEmail`). El mismo path `/recuperar-contrasena` también admite `token_hash` + `type` en query (mismo flujo que `auth/update-password` en core). **No** usar `withGuestAuth` en esta ruta: si el usuario ya tiene sesión y pide el formulario de email, se redirige a `/home`; el paso “nueva contraseña” requiere sesión temporal de recuperación.
+**Recuperar contraseña:** el correo debe apuntar al callback con `next` hacia `/recovery-password?paso=nueva` (ya configurado en `resetPasswordForEmail`). El mismo path `/recovery-password` también admite `token_hash` + `type` en query (mismo flujo que `auth/update-password` en core). **No** usar `withGuestAuth` en esta ruta: si el usuario ya tiene sesión y pide el formulario de email, se redirige a `/home`; el paso “nueva contraseña” requiere sesión temporal de recuperación.
 
-En **Supabase → Authentication → URL configuration**, incluir **Redirect URLs** como `http://localhost:3000/auth/callback` y `http://localhost:3000/recuperar-contrasena` (y producción).
+En **Supabase → Authentication → URL configuration**, incluir **Redirect URLs** como `http://localhost:3000/auth/callback` y `http://localhost:3000/recovery-password` (y producción).
 
 **Protegidas con `withAuth`:** `/home`, `/[pop]/menu`, `/[pop]/sale`. **Con `withGuestAuth`:** `/login`, `/register`.
 

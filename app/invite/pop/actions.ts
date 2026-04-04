@@ -1,6 +1,7 @@
 "use server"
 
 import { requireAuthenticatedUser } from "@/lib/authHelpers"
+import { siteIdFromPopRow } from "@/lib/popRoutes"
 import { createClient } from "@/utils/supabase/server"
 
 type AcceptPayload = {
@@ -12,7 +13,8 @@ type AcceptPayload = {
 export async function acceptPopInvitation(
   token: string,
 ): Promise<
-  { success: true; popId: string } | { success: false; error: string }
+  | { success: true; popId: string; siteId: string }
+  | { success: false; error: string }
 > {
   const t = token?.trim()
   if (!t) return { success: false, error: "Token no válido." }
@@ -44,5 +46,18 @@ export async function acceptPopInvitation(
     }
   }
 
-  return { success: true, popId: String(payload.pop_id) }
+  const popId = String(payload.pop_id)
+  const { data: popRow } = await supabase
+    .from("pops")
+    .select("site_id, settings")
+    .eq("id", popId)
+    .maybeSingle()
+  return {
+    success: true,
+    popId,
+    siteId: siteIdFromPopRow({
+      site_id: popRow?.site_id as string | null | undefined,
+      settings: popRow?.settings,
+    }),
+  }
 }

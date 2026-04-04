@@ -403,7 +403,7 @@ function RegisterPage() {
               </Button>
 
               <Link
-                href="/recuperar-contrasena"
+                href="/recovery-password"
                 className="mx-auto block w-fit text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 No recuerdo mi contraseña

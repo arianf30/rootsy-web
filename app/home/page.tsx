@@ -247,7 +247,9 @@ function HomePage() {
                       <div className="mx-auto flex w-full max-w-40 flex-col items-center">
                         <button
                           type="button"
-                          onClick={() => router.push(`/${pop.id}/menu`)}
+                          onClick={() =>
+                            router.push(`/${pop.siteId}/${pop.id}/menu`)
+                          }
                           className="flex w-full flex-col items-center"
                         >
                           <div className="relative">
@@ -272,6 +274,12 @@ function HomePage() {
                           <span className="mt-4 text-center text-[0.92rem] font-semibold text-white/78 transition-colors group-hover:text-white">
                             {pop.name}
                           </span>
+                          <span
+                            className="mt-1 text-center font-mono text-[10px] font-semibold uppercase tracking-wider text-white/42"
+                            title="Site ID"
+                          >
+                            {pop.siteId}
+                          </span>
                           {!pop.isOwner ? (
                             <span className="mt-1 line-clamp-2 text-center text-[10px] font-medium uppercase tracking-wider text-white/40">
                               {pop.roleName}
@@ -288,7 +296,9 @@ function HomePage() {
                             variant="secondary"
                             className="mt-3 h-8 border-white/20 bg-white/10 text-xs text-white hover:bg-white/15"
                             onClick={() =>
-                              router.push(`/${pop.id}/subscribe`)
+                              router.push(
+                                `/${pop.siteId}/${pop.id}/subscribe`,
+                              )
                             }
                           >
                             Activar suscripción

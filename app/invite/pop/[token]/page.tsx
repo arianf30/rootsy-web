@@ -38,7 +38,7 @@ function InvitePopPage() {
     }
     setMsg("Listo. Ya tenés acceso al punto de venta.")
     setTimeout(() => {
-      router.push(`/${res.popId}/menu`)
+      router.push(`/${res.siteId}/${res.popId}/menu`)
     }, 900)
   }
 

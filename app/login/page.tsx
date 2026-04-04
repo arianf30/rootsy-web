@@ -231,7 +231,7 @@ function LoginPage() {
               </Button>
 
               <Link
-                href="/recuperar-contrasena"
+                href="/recovery-password"
                 className="mx-auto block text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 No recuerdo mi contraseña
