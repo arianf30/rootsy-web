@@ -619,7 +619,13 @@ export default function MenuPage() {
 
       {/* Grid: fila 1 = header · fila 2 = resto del viewport (panel + subgrid) */}
       <div className="relative z-10 grid h-full max-h-dvh min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)]">
-      <header className="relative z-20 shrink-0 border-b border-rootsy-hairline bg-card/98 backdrop-blur-2xl">
+      <header
+        className="relative z-20 shrink-0 border-b border-rootsy-hairline backdrop-blur-2xl backdrop-saturate-110"
+        style={{
+          background:
+            "linear-gradient(to bottom, rgb(255 255 255 / 0.1), rgb(12 15 14 / 0.24))",
+        }}
+      >
         <div className="flex items-center justify-between px-4 py-4 sm:px-8 sm:py-5">
           <div className="flex min-w-0 items-center gap-3 sm:gap-6">
             <Link
@@ -794,7 +800,7 @@ export default function MenuPage() {
               className="mb-6 flex justify-center px-4 sm:mb-8"
               aria-label="Vista del menú: todos los accesos o por grupo"
             >
-              <div className="flex max-w-full flex-wrap items-center justify-center gap-1 rounded-2xl border border-border/80 bg-muted/95 px-2 py-2 shadow-lg backdrop-blur-2xl sm:flex-nowrap sm:gap-1.5 sm:px-3 sm:py-2.5">
+              <div className="flex max-w-full flex-wrap items-center justify-center gap-1 rounded-2xl border border-border/80 bg-muted/45 px-2 py-2 shadow-lg backdrop-blur-2xl sm:flex-nowrap sm:gap-1.5 sm:px-3 sm:py-2.5">
                 {menuSlides.map((slide, index) => (
                   <button
                     key={slide.key}
