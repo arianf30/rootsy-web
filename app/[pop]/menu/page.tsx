@@ -3,9 +3,10 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
-  type MouseEvent,
+  type ReactNode,
 } from "react"
 import Link from "next/link"
 import useEmblaCarousel from "embla-carousel-react"
@@ -31,7 +32,6 @@ import {
 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 
-import { MenuTruncatedLabel } from "@/components/pop/menu-truncated-label"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -52,10 +52,100 @@ import {
   MAX_MENU_FAVORITES,
   POP_MENU_SECTIONS,
   type MenuItemDef,
+  type MenuSectionDef,
   getMenuItemById,
   resolveMenuHref,
 } from "@/lib/pop-menu-data"
 import { cn } from "@/lib/utils"
+
+const MENU_PAGE_SIZE = 12 /** 4×3 (desktop) — más ítems = scroll dentro del contenedor */
+
+type MenuSlide = {
+  key: string
+  title: string
+  items: MenuItemDef[]
+}
+
+function buildMenuSlides(sections: MenuSectionDef[]): MenuSlide[] {
+  const all = sections.flatMap((s) => s.items)
+  return [
+    { key: "todos", title: "Todos", items: all },
+    ...sections.map((s) => ({
+      key: s.id,
+      title: s.title,
+      items: s.items,
+    })),
+  ]
+}
+
+const MENU_GRID_MAX_W =
+  "max-w-[min(100%,20.5rem)] sm:max-w-[min(100%,31.5rem)]"
+
+function MenuGridScrollArea({
+  needsScroll,
+  slideTitle,
+  children,
+}: {
+  needsScroll: boolean
+  slideTitle: string
+  children: ReactNode
+}) {
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [barVisible, setBarVisible] = useState(false)
+
+  const flashScrollbar = useCallback(() => {
+    setBarVisible(true)
+    if (hideTimer.current) clearTimeout(hideTimer.current)
+    hideTimer.current = setTimeout(() => setBarVisible(false), 950)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current)
+    }
+  }, [])
+
+  if (!needsScroll) {
+    return (
+      <div
+        className={cn(
+          "mx-auto w-full px-4 pb-8 pt-6 sm:px-5 sm:pb-10 sm:pt-6",
+          MENU_GRID_MAX_W,
+        )}
+      >
+        {children}
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={cn(
+        "relative mx-auto flex min-h-0 w-full min-w-0 flex-1 basis-0 flex-col",
+        MENU_GRID_MAX_W,
+      )}
+    >
+      <div
+        onScroll={flashScrollbar}
+        className={cn(
+          "rootsy-menu-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-clip overscroll-y-contain pr-1 scroll-smooth",
+          barVisible && "rootsy-menu-scroll--active",
+        )}
+        role="region"
+        aria-label={`${slideTitle}: desplazá para ver más accesos`}
+      >
+        {/* Aire para estrella (-top/-right), hover scale/sombras; pb para scroll bajo el fade */}
+        <div className="px-4 pb-[4.75rem] pt-6 sm:px-5 sm:pb-[5.25rem] sm:pt-6">
+          {children}
+        </div>
+      </div>
+      <div
+        className="rootsy-menu-scroll-bottom-fade pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[4.75rem] sm:h-[5.25rem]"
+        aria-hidden
+      />
+    </div>
+  )
+}
 
 const CONFIG_ITEMS: {
   id: string
@@ -99,9 +189,6 @@ const SAMPLE_NOTIFICATIONS = [
   },
 ]
 
-const MENU_CARD_H =
-  "h-[5.5rem] min-h-[5.5rem] sm:h-[7.25rem] sm:min-h-[7.25rem]"
-
 function MenuMiniCard({
   item,
   popSlug,
@@ -119,70 +206,40 @@ function MenuMiniCard({
   onNavigate: () => void
   onToggleFavorite: () => void
 }) {
-  const [hover, setHover] = useState(false)
   const Icon = item.icon
   const href = resolveMenuHref(item, popSlug)
 
-  const onCardMove = useCallback((e: MouseEvent<HTMLElement>) => {
-    if (
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
-      return
-    }
-    const el = e.currentTarget
-    const rect = el.getBoundingClientRect()
-    const px = (e.clientX - rect.left) / rect.width - 0.5
-    const py = (e.clientY - rect.top) / rect.height - 0.5
-    const max = 8
-    el.style.setProperty("--rx", `${-py * max}deg`)
-    el.style.setProperty("--ry", `${px * max}deg`)
-  }, [])
-
-  const onCardLeave = useCallback((e: MouseEvent<HTMLElement>) => {
-    const el = e.currentTarget
-    el.style.setProperty("--rx", "0deg")
-    el.style.setProperty("--ry", "0deg")
-  }, [])
-
   return (
-    <div
-      className="relative w-full"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
-      <div
-        onMouseMove={onCardMove}
-        onMouseLeave={onCardLeave}
-        className={cn(
-          "group rootsy-card-tilt relative w-full rounded-2xl",
-          "ring-1 ring-white/[0.04] transition-[box-shadow] duration-300",
-          "shadow-[0_14px_36px_-14px_rgba(0,0,0,0.55),inset_0_1px_0_0_rgba(255,255,255,0.06)]",
-          "hover:shadow-[0_22px_48px_-12px_rgba(0,0,0,0.6),0_0_0_1px_rgba(16,185,129,0.22),0_0_36px_-10px_rgba(16,185,129,0.2),inset_0_1px_0_0_rgba(255,255,255,0.1)]",
-        )}
-      >
+    <div className="relative h-full w-full rounded-2xl hover:z-20">
+      <div className="relative h-full rounded-2xl">
         <button
           type="button"
           onClick={onNavigate}
           className={cn(
-            MENU_CARD_H,
-            "relative z-0 flex w-full flex-col overflow-hidden rounded-2xl border border-white/[0.09] bg-[#121816] p-2.5 text-left transition-[border-color,background-color] duration-200 hover:border-emerald-500/28 hover:bg-[#151c19] sm:p-3",
+            "group/menu-tile relative z-0 flex h-full min-h-[6.75rem] w-full flex-col overflow-hidden rounded-2xl border border-white/[0.09] bg-[#121816] p-2.5 text-left sm:min-h-[8rem] sm:p-3",
+            "shadow-[0_10px_28px_-12px_rgba(0,0,0,0.55),inset_0_1px_0_0_rgba(255,255,255,0.05)]",
+            "transition-[transform,box-shadow,background-color,border-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+            "hover:-translate-y-0.5 hover:scale-[1.042] hover:border-white/18 hover:bg-[#181f1c]",
+            "hover:shadow-[0_0_0_2px_rgba(255,255,255,0.28),0_0_36px_-10px_rgba(255,255,255,0.12),0_0_48px_-14px_rgba(16,185,129,0.28),0_20px_50px_-18px_rgba(0,0,0,0.7)]",
+            "active:scale-[0.98] active:translate-y-0",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070a09]",
+            "motion-reduce:transition-colors motion-reduce:hover:scale-100 motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-none",
           )}
         >
+          {/* Borde superior “iluminado” tipo highlight de tile seleccionada (PS5 / Xbox) */}
           <div
-            className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl motion-reduce:hidden"
+            className="pointer-events-none absolute inset-x-2.5 top-0 z-[2] h-px rounded-full bg-linear-to-r from-transparent via-white/45 to-transparent opacity-0 transition-opacity duration-300 group-hover/menu-tile:opacity-100 motion-reduce:opacity-0"
             aria-hidden
-          >
-            <div
-              className={cn(
-                "absolute top-0 h-full w-[55%] skew-x-[-16deg] bg-linear-to-r from-transparent via-white/30 to-transparent opacity-0 transition-[left,opacity] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
-                "left-[-60%] group-hover:left-[125%] group-hover:opacity-90",
-              )}
-            />
-          </div>
+          />
 
           <div className="relative z-[1] flex shrink-0 items-start justify-between gap-1">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] ring-1 ring-white/[0.08] sm:size-9">
+            <div
+              className={cn(
+                "flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] ring-1 ring-white/[0.08] transition-[transform,background-color,box-shadow] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:size-9",
+                "group-hover/menu-tile:scale-105 group-hover/menu-tile:bg-white/[0.11] group-hover/menu-tile:shadow-[0_0_16px_-4px_rgba(52,211,153,0.35)]",
+                "motion-reduce:group-hover/menu-tile:scale-100",
+              )}
+            >
               <Icon className="size-4 text-emerald-200/90" aria-hidden />
             </div>
             <div className="flex min-h-5 shrink-0 flex-col items-end gap-1">
@@ -209,12 +266,13 @@ function MenuMiniCard({
             </div>
           </div>
 
-          <div className="relative z-[1] mt-auto min-h-0 w-full pt-2">
-            <MenuTruncatedLabel
-              text={item.name}
-              active={hover}
-              className="text-left text-[10px] font-semibold leading-snug text-white/88 sm:text-[11px]"
-            />
+          <div className="relative z-[1] mt-auto min-h-0 w-full border-t border-white/[0.05] pt-2">
+            <p
+              className="text-pretty text-left text-[9px] font-semibold leading-[1.35] tracking-tight text-white/92 sm:text-[10px] sm:leading-snug"
+              lang="es"
+            >
+              {item.name}
+            </p>
           </div>
 
           {href ? (
@@ -291,7 +349,7 @@ export default function MenuPage() {
   const [dockEditing, setDockEditing] = useState(false)
   const [favToast, setFavToast] = useState<string | null>(null)
 
-  const sections = POP_MENU_SECTIONS
+  const menuSlides = useMemo(() => buildMenuSlides(POP_MENU_SECTIONS), [])
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: false,
@@ -363,12 +421,18 @@ export default function MenuPage() {
     return () => window.removeEventListener("mousemove", handleMouseMove)
   }, [])
 
-  const getFilteredItems = (sectionIndex: number) => {
-    const section = sections[sectionIndex]
-    if (!searchQuery.trim()) return section.items
-    const q = searchQuery.toLowerCase()
-    return section.items.filter((item) => item.name.toLowerCase().includes(q))
-  }
+  const getSlideItems = useCallback(
+    (slideIndex: number) => {
+      const slide = menuSlides[slideIndex]
+      if (!slide) return []
+      const q = searchQuery.trim().toLowerCase()
+      if (!q) return slide.items
+      return slide.items.filter((item) =>
+        item.name.toLowerCase().includes(q),
+      )
+    },
+    [menuSlides, searchQuery],
+  )
 
   const toggleFavorite = useCallback((id: string) => {
     setFavoriteIds((prev) => {
@@ -630,78 +694,106 @@ export default function MenuPage() {
         </div>
       </header>
 
-      <div className="relative z-10 flex flex-1 flex-col overflow-y-auto overflow-x-hidden pb-28 pt-4 sm:pb-32">
-        <nav
-          className="mb-6 flex justify-center px-4 sm:mb-8"
-          aria-label="Grupos del menú"
+      <div className="rootsy-pop-menu-panel relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
+        {/* Fondo pleno + imagen + velo degradado (mismo tono que el fade del scroll) */}
+        <div
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+          aria-hidden
         >
-          <div className="flex items-center gap-1 rounded-2xl border border-border/80 bg-muted/95 px-2 py-2 shadow-lg backdrop-blur-2xl sm:gap-1.5 sm:px-3 sm:py-2.5">
-            {sections.map((sec, index) => (
-              <button
-                key={sec.id}
-                type="button"
-                onClick={() => scrollTo(index)}
-                className={cn(
-                  "rounded-xl px-3 py-2 text-xs font-semibold transition-colors sm:px-5 sm:py-2.5 sm:text-sm",
-                  selectedIndex === index
-                    ? "bg-primary/18 text-primary shadow-sm"
-                    : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-                )}
-              >
-                {sec.title}
-              </button>
-            ))}
-          </div>
-        </nav>
+          <div className="absolute inset-0 bg-[var(--rootsy-menu-surface)]" />
+          <img
+            src={wallpaperSrc}
+            alt=""
+            className="absolute inset-0 size-full object-cover opacity-[0.18] saturate-[0.9] dark:opacity-[0.24]"
+          />
+          <div className="rootsy-pop-menu-panel__image-veil absolute inset-0" />
+        </div>
 
-        {favToast ? (
-          <p
-            className="mx-auto mb-4 max-w-lg rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-100 sm:text-sm"
-            role="status"
+        <div className="relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col pt-4 pb-28 sm:pb-32">
+          <nav
+            className="mb-6 flex justify-center px-4 sm:mb-8"
+            aria-label="Vista del menú: todos los accesos o por grupo"
           >
-            {favToast}
-          </p>
-        ) : null}
-
-        <div className="w-full min-w-0 flex-1" ref={emblaRef}>
-          <div className="flex">
-            {sections.map((section, sectionIndex) => {
-              const items = getFilteredItems(sectionIndex)
-              return (
-                <div
-                  key={section.id}
-                  className="min-w-0 flex-[0_0_100%] px-3 sm:px-8"
+            <div className="flex max-w-full flex-wrap items-center justify-center gap-1 rounded-2xl border border-border/80 bg-muted/95 px-2 py-2 shadow-lg backdrop-blur-2xl sm:flex-nowrap sm:gap-1.5 sm:px-3 sm:py-2.5">
+              {menuSlides.map((slide, index) => (
+                <button
+                  key={slide.key}
+                  type="button"
+                  onClick={() => scrollTo(index)}
+                  className={cn(
+                    "rounded-xl px-2.5 py-2 text-[11px] font-semibold transition-colors sm:px-5 sm:py-2.5 sm:text-sm",
+                    selectedIndex === index
+                      ? "bg-primary/18 text-primary shadow-sm"
+                      : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+                  )}
                 >
+                  {slide.title}
+                </button>
+              ))}
+            </div>
+          </nav>
+
+          {favToast ? (
+            <p
+              className="mx-auto mb-4 max-w-lg rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-100 sm:text-sm"
+              role="status"
+            >
+              {favToast}
+            </p>
+          ) : null}
+
+          <div
+            className="min-h-0 w-full min-w-0 flex-1 touch-pan-y"
+            ref={emblaRef}
+          >
+            <div className="flex h-full min-h-0 min-w-full">
+              {menuSlides.map((slide, slideIndex) => {
+                const items = getSlideItems(slideIndex)
+                const needsScroll = items.length > MENU_PAGE_SIZE
+                return (
                   <div
-                    className={cn(
-                      "mx-auto grid w-full max-w-[min(100%,23.75rem)] grid-cols-4 gap-1.5 [perspective:1400px] sm:max-w-[min(100%,31.5rem)] sm:gap-3",
-                      "[grid-auto-rows:5.5rem] sm:[grid-auto-rows:7.25rem]",
-                    )}
+                    key={slide.key}
+                    className="flex h-full min-h-0 min-w-0 flex-[0_0_100%] flex-col px-3 sm:px-8"
                   >
-                    {items.map((item) => (
-                      <MenuMiniCard
-                        key={item.id}
-                        item={item}
-                        popSlug={popSlug}
-                        isFavorite={favoriteIds.includes(item.id)}
-                        favoritesFull={favoritesFull}
-                        dockEditing={dockEditing}
-                        onNavigate={() => {
-                          const to = resolveMenuHref(item, popSlug)
-                          if (to) router.push(to)
-                        }}
-                        onToggleFavorite={() => toggleFavorite(item.id)}
-                      />
-                    ))}
+                    <MenuGridScrollArea
+                      needsScroll={needsScroll}
+                      slideTitle={slide.title}
+                    >
+                      <div
+                        className={cn(
+                          "mx-auto grid w-full grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-3",
+                          "[grid-auto-rows:minmax(6.75rem,auto)] sm:[grid-auto-rows:minmax(8rem,auto)]",
+                        )}
+                      >
+                        {items.map((item) => (
+                          <MenuMiniCard
+                            key={item.id}
+                            item={item}
+                            popSlug={popSlug}
+                            isFavorite={favoriteIds.includes(item.id)}
+                            favoritesFull={favoritesFull}
+                            dockEditing={dockEditing}
+                            onNavigate={() => {
+                              const to = resolveMenuHref(item, popSlug)
+                              if (to) router.push(to)
+                            }}
+                            onToggleFavorite={() => toggleFavorite(item.id)}
+                          />
+                        ))}
+                      </div>
+                    </MenuGridScrollArea>
+                    {items.length === 0 ? (
+                      <p className="mt-16 text-center text-sm text-muted-foreground">
+                        No hay ítems en {slide.title}
+                        {searchQuery.trim()
+                          ? ` para “${searchQuery}”.`
+                          : "."}
+                      </p>
+                    ) : null}
                   </div>
-                  {items.length === 0 ? (
-                    <p className="mt-16 text-center text-sm text-muted-foreground">
-                      No hay ítems en {section.title} para “{searchQuery}”.
-                    </p>
-                  ) : null}
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>

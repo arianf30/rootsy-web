@@ -431,6 +431,77 @@
     animation: rootsy-dock-wiggle 0.38s ease-in-out infinite;
   }
 
+  /**
+   * Menú POP: scroll interno — thumb oculto hasta interactuar; accent = --primary
+   */
+  .rootsy-menu-scroll {
+    scrollbar-gutter: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  /**
+   * Panel del menú POP: superficie unificada (mismo tono que el shell oscuro).
+   * La imagen se funde arriba y abajo vía degradado para alinear con el fade del scroll.
+   */
+  .rootsy-pop-menu-panel {
+    --rootsy-menu-surface: var(--background);
+  }
+
+  .dark .rootsy-pop-menu-panel {
+    --rootsy-menu-surface: #070a09;
+  }
+
+  .rootsy-pop-menu-panel__image-veil {
+    background: linear-gradient(
+      to bottom,
+      var(--rootsy-menu-surface) 0%,
+      color-mix(in srgb, var(--rootsy-menu-surface) 22%, transparent) 18%,
+      transparent 44%,
+      transparent 56%,
+      color-mix(in srgb, var(--rootsy-menu-surface) 28%, transparent) 82%,
+      var(--rootsy-menu-surface) 100%
+    );
+  }
+
+  /** Fade inferior del área con scroll — mismo --rootsy-menu-surface (heredado del panel) */
+  .rootsy-menu-scroll-bottom-fade {
+    background: linear-gradient(
+      to top,
+      var(--rootsy-menu-surface) 0%,
+      color-mix(in srgb, var(--rootsy-menu-surface) 78%, transparent) 35%,
+      transparent 100%
+    );
+  }
+
+  .rootsy-menu-scroll--active {
+    scrollbar-color: color-mix(in srgb, var(--primary) 78%, transparent)
+      transparent;
+  }
+
+  .rootsy-menu-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .rootsy-menu-scroll::-webkit-scrollbar-track {
+    margin-block: 8px;
+    background: transparent;
+  }
+
+  .rootsy-menu-scroll::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: transparent;
+    box-shadow: none;
+    transition:
+      background-color 0.35s ease,
+      box-shadow 0.35s ease;
+  }
+
+  .rootsy-menu-scroll--active::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--primary) 85%, transparent);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--primary) 40%, transparent);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .rootsy-dock-edit-wiggle {
       animation: none;
@@ -475,6 +546,15 @@
     }
     .rootsy-marquee-logos {
       animation: none;
+    }
+
+    .rootsy-menu-scroll {
+      scrollbar-color: color-mix(in srgb, var(--primary) 62%, transparent)
+        transparent;
+    }
+
+    .rootsy-menu-scroll::-webkit-scrollbar-thumb {
+      background-color: color-mix(in srgb, var(--primary) 62%, transparent);
     }
   }
 }
