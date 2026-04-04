@@ -3,9 +3,11 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from "react"
 import Link from "next/link"
@@ -81,6 +83,112 @@ function buildMenuSlides(sections: MenuSectionDef[]): MenuSlide[] {
 const MENU_GRID_MAX_W =
   "max-w-[min(100%,20.5rem)] sm:max-w-[min(100%,31.5rem)]"
 
+/** Degradé superior: todo en 10px (igual que pt del grid) para que la 1ª hilera quede en máscara transparente. */
+const MENU_ROW_OVERLAY_TOP_FADE_PX = 10
+const MENU_ROW_OVERLAY_BOTTOM_EDGE_PX = 30
+const MENU_ROW_OVERLAY_BOTTOM_FADE_PX = 56
+
+/** Máscara en coords de viewport: solo la franja de la fila; arriba #000→transparente en TOP_FADE_PX; abajo banda + fundido. */
+function menuRowOverlayMaskStyle(viewportTop: number, viewportBottom: number): Pick<
+  CSSProperties,
+  | "maskImage"
+  | "WebkitMaskImage"
+  | "maskSize"
+  | "WebkitMaskSize"
+  | "maskRepeat"
+  | "WebkitMaskRepeat"
+> {
+  const topFade = MENU_ROW_OVERLAY_TOP_FADE_PX
+  const bandBottom = MENU_ROW_OVERLAY_BOTTOM_EDGE_PX
+  const fadeBottom = MENU_ROW_OVERLAY_BOTTOM_FADE_PX
+  const top = Math.max(0, viewportTop)
+  const bottom = Math.max(top, viewportBottom)
+  const h = bottom - top
+  const yTopFadeEnd = top + topFade
+  const yFadeBottomStart = bottom - bandBottom - fadeBottom
+  const ySolidBottomStart = bottom - bandBottom
+  const minHeightForFullMask = topFade + bandBottom + fadeBottom * 2
+
+  const grad =
+    h >= minHeightForFullMask && yTopFadeEnd <= yFadeBottomStart
+      ? `linear-gradient(to bottom, transparent 0px, transparent ${top}px, #000 ${top}px, transparent ${yTopFadeEnd}px, transparent ${yFadeBottomStart}px, #000 ${ySolidBottomStart}px, #000 ${bottom}px, transparent ${bottom}px, transparent 100%)`
+      : `linear-gradient(to bottom, transparent 0px, transparent ${top}px, #000 ${top}px, transparent ${yTopFadeEnd}px, transparent ${(top + bottom) / 2}px, #000 ${bottom}px, transparent ${bottom}px, transparent 100%)`
+
+  return {
+    maskImage: grad,
+    WebkitMaskImage: grad,
+    maskSize: "100% 100%",
+    WebkitMaskSize: "100% 100%",
+    maskRepeat: "no-repeat",
+    WebkitMaskRepeat: "no-repeat",
+  }
+}
+
+/** Wallpaper alineado al viewport (evita desfase entre capas con object-cover en cajas distintas). */
+function popMenuWallpaperFixedStyle(wallpaperSrc: string): CSSProperties {
+  return {
+    backgroundImage: `url(${JSON.stringify(wallpaperSrc)})`,
+    backgroundSize: "cover",
+    backgroundPosition: "center center",
+    backgroundAttachment: "fixed",
+    backgroundRepeat: "no-repeat",
+  }
+}
+
+/** Velo #000 al 80% sobre la foto (página, panel y overlay enmascarado). */
+const POP_MENU_WALLPAPER_SCRIM_OPACITY_CLASS = "bg-black/80"
+
+/** Imagen + velo (mismo stack en página, panel y overlay enmascarado). */
+function PopMenuWallpaperWithScrim({ wallpaperSrc }: { wallpaperSrc: string }) {
+  return (
+    <>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0"
+        style={popMenuWallpaperFixedStyle(wallpaperSrc)}
+      />
+      <div
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-0 z-[1]",
+          POP_MENU_WALLPAPER_SCRIM_OPACITY_CLASS,
+        )}
+      />
+    </>
+  )
+}
+
+/** Fondo del panel POP: wallpaper + velo. */
+function PopMenuPanelSurfaceLayers({
+  wallpaperSrc,
+}: {
+  wallpaperSrc: string
+}) {
+  return <PopMenuWallpaperWithScrim wallpaperSrc={wallpaperSrc} />
+}
+
+/** Fondo global de página: wallpaper + velo (viewport-fixed en la capa imagen). */
+function PopMenuViewportBackgroundLayers({
+  wallpaperSrc,
+}: {
+  wallpaperSrc: string
+}) {
+  return (
+    <div className="pointer-events-none relative size-full min-h-0 min-w-0">
+      <PopMenuWallpaperWithScrim wallpaperSrc={wallpaperSrc} />
+    </div>
+  )
+}
+
+/** Overlay recortado: mismo stack que el fondo global. */
+function PopMenuRowOverlayBackground({ wallpaperSrc }: { wallpaperSrc: string }) {
+  return (
+    <div className="pointer-events-none relative size-full min-h-0 min-w-0">
+      <PopMenuWallpaperWithScrim wallpaperSrc={wallpaperSrc} />
+    </div>
+  )
+}
+
 function MenuGridScrollArea({
   needsScroll,
   slideTitle,
@@ -109,7 +217,7 @@ function MenuGridScrollArea({
     return (
       <div
         className={cn(
-          "mx-auto w-full px-4 pb-8 pt-6 sm:px-5 sm:pb-10 sm:pt-6",
+          "mx-auto w-full px-4 pb-8 pt-2.5 sm:px-5 sm:pb-10 sm:pt-2.5",
           MENU_GRID_MAX_W,
         )}
       >
@@ -134,15 +242,11 @@ function MenuGridScrollArea({
         role="region"
         aria-label={`${slideTitle}: desplazá para ver más accesos`}
       >
-        {/* Aire para estrella (-top/-right), hover scale/sombras; pb para scroll bajo el fade */}
-        <div className="px-4 pb-[4.75rem] pt-6 sm:px-5 sm:pb-[5.25rem] sm:pt-6">
+        {/* pt 10px alineado a la banda superior de la máscara del overlay; pb aire bajo última fila */}
+        <div className="px-4 pb-8 pt-2.5 sm:px-5 sm:pb-10 sm:pt-2.5">
           {children}
         </div>
       </div>
-      <div
-        className="rootsy-menu-scroll-bottom-fade pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[4.75rem] sm:h-[5.25rem]"
-        aria-hidden
-      />
     </div>
   )
 }
@@ -322,20 +426,18 @@ export default function MenuPage() {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [searchQuery, setSearchQuery] = useState("")
   const [showSearch, setShowSearch] = useState(false)
-  const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
-  const [particles, setParticles] = useState<
-    Array<{
-      width: number
-      height: number
-      left: number
-      top: number
-      opacity: number
-      duration: number
-      delay: number
-    }>
-  >([])
   const containerRef = useRef<HTMLDivElement>(null)
   const wallpaperInputRef = useRef<HTMLInputElement>(null)
+  const menuButtonsRowRef = useRef<HTMLDivElement>(null)
+  /** clip-path inset(top right bottom left) — fila menú en coords de viewport */
+  const [menuRowClipInset, setMenuRowClipInset] = useState(
+    "inset(100% 100% 100% 100%)",
+  )
+  /** Bordes superior/inferior de la fila (px viewport) para máscara radial al bloque real. */
+  const [menuRowViewportSpan, setMenuRowViewportSpan] = useState<{
+    top: number
+    bottom: number
+  } | null>(null)
 
   const [wallpaperSrc, setWallpaperSrc] = useState(DEFAULT_MENU_WALLPAPER)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -384,18 +486,6 @@ export default function MenuPage() {
     const w = loadWallpaperUrl()
     if (w) setWallpaperSrc(w)
     setFavoritesHydrated(true)
-
-    setParticles(
-      Array.from({ length: 10 }, () => ({
-        width: Math.random() * 2 + 1,
-        height: Math.random() * 2 + 1,
-        left: Math.random() * 100,
-        top: Math.random() * 100,
-        opacity: Math.random() * 0.12 + 0.04,
-        duration: Math.random() * 20 + 15,
-        delay: Math.random() * 5,
-      })),
-    )
   }, [])
 
   useEffect(() => {
@@ -407,18 +497,38 @@ export default function MenuPage() {
     if (!settingsOpen) setSettingsView("main")
   }, [settingsOpen])
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect()
-        setMousePos({
-          x: ((e.clientX - rect.left) / rect.width) * 100,
-          y: ((e.clientY - rect.top) / rect.height) * 100,
-        })
-      }
+  useLayoutEffect(() => {
+    const row = menuButtonsRowRef.current
+    if (!row) return
+
+    const syncClip = () => {
+      const r = row.getBoundingClientRect()
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      const top = Math.round(Math.max(0, r.top))
+      const right = Math.round(Math.max(0, vw - r.right))
+      const bottom = Math.round(Math.max(0, vh - r.bottom))
+      const left = Math.round(Math.max(0, r.left))
+      setMenuRowClipInset(`inset(${top}px ${right}px ${bottom}px ${left}px)`)
+      setMenuRowViewportSpan({
+        top: Math.round(r.top),
+        bottom: Math.round(r.bottom),
+      })
     }
-    window.addEventListener("mousemove", handleMouseMove)
-    return () => window.removeEventListener("mousemove", handleMouseMove)
+
+    syncClip()
+    const ro = new ResizeObserver(syncClip)
+    ro.observe(row)
+    window.addEventListener("resize", syncClip)
+    window.visualViewport?.addEventListener("resize", syncClip)
+    window.visualViewport?.addEventListener("scroll", syncClip)
+    requestAnimationFrame(() => syncClip())
+    return () => {
+      ro.disconnect()
+      window.removeEventListener("resize", syncClip)
+      window.visualViewport?.removeEventListener("resize", syncClip)
+      window.visualViewport?.removeEventListener("scroll", syncClip)
+    }
   }, [])
 
   const getSlideItems = useCallback(
@@ -483,7 +593,7 @@ export default function MenuPage() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 flex flex-col overflow-hidden bg-background"
+      className="fixed inset-0 overflow-hidden bg-black"
     >
       <input
         ref={wallpaperInputRef}
@@ -493,49 +603,14 @@ export default function MenuPage() {
         onChange={(e) => handleWallpaperFile(e.target.files)}
       />
 
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <img
-          src={wallpaperSrc}
-          alt=""
-          className="size-full object-cover"
-        />
-        <div
-          className="absolute inset-0 bg-background/80 dark:bg-[#070a09]/86"
-          aria-hidden
-        />
-        <div
-          className="absolute inset-0 bg-linear-to-b from-background/50 via-transparent to-background/90"
-          aria-hidden
-        />
-        <div
-          className="absolute w-[800px] h-[800px] rounded-full opacity-[0.07] blur-[150px] transition-all duration-[2000ms] ease-out"
-          style={{
-            background:
-              "radial-gradient(circle, color-mix(in srgb, var(--rootsy-particle) 45%, transparent) 0%, transparent 70%)",
-            left: `${mousePos.x}%`,
-            top: `${mousePos.y}%`,
-            transform: "translate(-50%, -50%)",
-          }}
-        />
-        {particles.map((particle, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full animate-float"
-            style={{
-              width: `${particle.width}px`,
-              height: `${particle.height}px`,
-              left: `${particle.left}%`,
-              top: `${particle.top}%`,
-              background: "var(--rootsy-particle)",
-              opacity: particle.opacity,
-              animationDuration: `${particle.duration}s`,
-              animationDelay: `${particle.delay}s`,
-            }}
-          />
-        ))}
+      {/* Fondo pantalla completo (100% × 100%) */}
+      <div className="pointer-events-none absolute inset-0 z-0 size-full min-h-0 min-w-0">
+        <PopMenuViewportBackgroundLayers wallpaperSrc={wallpaperSrc} />
       </div>
 
-      <header className="relative z-20 border-b border-rootsy-hairline bg-card/98 backdrop-blur-2xl">
+      {/* Grid: fila 1 = header · fila 2 = resto del viewport (panel + subgrid) */}
+      <div className="relative z-10 grid h-full max-h-dvh min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)]">
+      <header className="relative z-20 shrink-0 border-b border-rootsy-hairline bg-card/98 backdrop-blur-2xl">
         <div className="flex items-center justify-between px-4 py-4 sm:px-8 sm:py-5">
           <div className="flex min-w-0 items-center gap-3 sm:gap-6">
             <Link
@@ -694,191 +769,212 @@ export default function MenuPage() {
         </div>
       </header>
 
-      <div className="rootsy-pop-menu-panel relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
-        {/* Fondo pleno + imagen + velo degradado (mismo tono que el fade del scroll) */}
+      <div className="rootsy-pop-menu-panel relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+        {/* Solo wallpaper en el panel */}
         <div
           className="pointer-events-none absolute inset-0 overflow-hidden"
           aria-hidden
         >
-          <div className="absolute inset-0 bg-[var(--rootsy-menu-surface)]" />
-          <img
-            src={wallpaperSrc}
-            alt=""
-            className="absolute inset-0 size-full object-cover opacity-[0.18] saturate-[0.9] dark:opacity-[0.24]"
-          />
-          <div className="rootsy-pop-menu-panel__image-veil absolute inset-0" />
+          <PopMenuPanelSurfaceLayers wallpaperSrc={wallpaperSrc} />
         </div>
 
-        <div className="relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col pt-4 pb-28 sm:pb-32">
-          <nav
-            className="mb-6 flex justify-center px-4 sm:mb-8"
-            aria-label="Vista del menú: todos los accesos o por grupo"
-          >
-            <div className="flex max-w-full flex-wrap items-center justify-center gap-1 rounded-2xl border border-border/80 bg-muted/95 px-2 py-2 shadow-lg backdrop-blur-2xl sm:flex-nowrap sm:gap-1.5 sm:px-3 sm:py-2.5">
-              {menuSlides.map((slide, index) => (
-                <button
-                  key={slide.key}
-                  type="button"
-                  onClick={() => scrollTo(index)}
-                  className={cn(
-                    "rounded-xl px-2.5 py-2 text-[11px] font-semibold transition-colors sm:px-5 sm:py-2.5 sm:text-sm",
-                    selectedIndex === index
-                      ? "bg-primary/18 text-primary shadow-sm"
-                      : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-                  )}
-                >
-                  {slide.title}
-                </button>
-              ))}
-            </div>
-          </nav>
-
-          {favToast ? (
-            <p
-              className="mx-auto mb-4 max-w-lg rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-100 sm:text-sm"
-              role="status"
+        {/* Subgrid: tabs (alto contenido) · grid menú (1fr, scroll) · dock (alto contenido) */}
+        <div className="relative z-[1] grid min-h-0 min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto]">
+          <div className="shrink-0 pt-4">
+            <nav
+              className="mb-6 flex justify-center px-4 sm:mb-8"
+              aria-label="Vista del menú: todos los accesos o por grupo"
             >
-              {favToast}
-            </p>
-          ) : null}
+              <div className="flex max-w-full flex-wrap items-center justify-center gap-1 rounded-2xl border border-border/80 bg-muted/95 px-2 py-2 shadow-lg backdrop-blur-2xl sm:flex-nowrap sm:gap-1.5 sm:px-3 sm:py-2.5">
+                {menuSlides.map((slide, index) => (
+                  <button
+                    key={slide.key}
+                    type="button"
+                    onClick={() => scrollTo(index)}
+                    className={cn(
+                      "rounded-xl px-2.5 py-2 text-[11px] font-semibold transition-colors sm:px-5 sm:py-2.5 sm:text-sm",
+                      selectedIndex === index
+                        ? "bg-primary/18 text-primary shadow-sm"
+                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+                    )}
+                  >
+                    {slide.title}
+                  </button>
+                ))}
+              </div>
+            </nav>
+
+            {favToast ? (
+              <p
+                className="mx-auto mb-4 max-w-lg rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-100 sm:text-sm"
+                role="status"
+              >
+                {favToast}
+              </p>
+            ) : null}
+          </div>
 
           <div
-            className="min-h-0 w-full min-w-0 flex-1 touch-pan-y"
-            ref={emblaRef}
+            ref={menuButtonsRowRef}
+            className="relative isolate min-h-0 min-w-0 overflow-hidden"
           >
-            <div className="flex h-full min-h-0 min-w-full">
-              {menuSlides.map((slide, slideIndex) => {
-                const items = getSlideItems(slideIndex)
-                const needsScroll = items.length > MENU_PAGE_SIZE
-                return (
-                  <div
-                    key={slide.key}
-                    className="flex h-full min-h-0 min-w-0 flex-[0_0_100%] flex-col px-3 sm:px-8"
-                  >
-                    <MenuGridScrollArea
-                      needsScroll={needsScroll}
-                      slideTitle={slide.title}
+            {/* 1) Fondo (overlay global recortado + máscara) */}
+            {menuRowViewportSpan != null ? (
+              <div
+                className="pointer-events-none fixed inset-0 z-[25] overflow-hidden"
+                style={{
+                  clipPath: menuRowClipInset,
+                  ...menuRowOverlayMaskStyle(
+                    menuRowViewportSpan.top,
+                    menuRowViewportSpan.bottom,
+                  ),
+                }}
+                aria-hidden
+              >
+                <PopMenuRowOverlayBackground wallpaperSrc={wallpaperSrc} />
+              </div>
+            ) : null}
+            {/* 2) Botones (carrusel + grilla) */}
+            <div
+              className="relative z-[1] h-full min-h-0 w-full min-w-0 touch-pan-y"
+              ref={emblaRef}
+            >
+              <div className="flex h-full min-h-0 min-w-full">
+                {menuSlides.map((slide, slideIndex) => {
+                  const items = getSlideItems(slideIndex)
+                  const needsScroll = items.length > MENU_PAGE_SIZE
+                  return (
+                    <div
+                      key={slide.key}
+                      className="flex h-full min-h-0 min-w-0 flex-[0_0_100%] flex-col px-3 sm:px-8"
                     >
-                      <div
-                        className={cn(
-                          "mx-auto grid w-full grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-3",
-                          "[grid-auto-rows:minmax(6.75rem,auto)] sm:[grid-auto-rows:minmax(8rem,auto)]",
-                        )}
+                      <MenuGridScrollArea
+                        needsScroll={needsScroll}
+                        slideTitle={slide.title}
                       >
-                        {items.map((item) => (
-                          <MenuMiniCard
-                            key={item.id}
-                            item={item}
-                            popSlug={popSlug}
-                            isFavorite={favoriteIds.includes(item.id)}
-                            favoritesFull={favoritesFull}
-                            dockEditing={dockEditing}
-                            onNavigate={() => {
-                              const to = resolveMenuHref(item, popSlug)
-                              if (to) router.push(to)
-                            }}
-                            onToggleFavorite={() => toggleFavorite(item.id)}
-                          />
-                        ))}
+                        <div
+                          className={cn(
+                            "mx-auto grid w-full grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-3",
+                            "[grid-auto-rows:minmax(6.75rem,auto)] sm:[grid-auto-rows:minmax(8rem,auto)]",
+                          )}
+                        >
+                          {items.map((item) => (
+                            <MenuMiniCard
+                              key={item.id}
+                              item={item}
+                              popSlug={popSlug}
+                              isFavorite={favoriteIds.includes(item.id)}
+                              favoritesFull={favoritesFull}
+                              dockEditing={dockEditing}
+                              onNavigate={() => {
+                                const to = resolveMenuHref(item, popSlug)
+                                if (to) router.push(to)
+                              }}
+                              onToggleFavorite={() => toggleFavorite(item.id)}
+                            />
+                          ))}
+                        </div>
+                      </MenuGridScrollArea>
+                      {items.length === 0 ? (
+                        <p className="mt-16 text-center text-sm text-muted-foreground">
+                          No hay ítems en {slide.title}
+                          {searchQuery.trim()
+                            ? ` para “${searchQuery}”.`
+                            : "."}
+                        </p>
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Dock: solo 2 hijos directos — capa de fondo + barra de controles */}
+          <div className="relative z-20 shrink-0">
+            <div
+              className="pointer-events-none absolute inset-0 -z-10"
+              aria-hidden
+            />
+            <div className="pointer-events-none flex flex-col items-center px-3 pb-4 pt-2.5 sm:pb-5">
+              <div className="pointer-events-auto flex items-center gap-2 rounded-2xl border border-border/80 bg-muted/95 px-2 py-2 shadow-lg backdrop-blur-2xl sm:px-4 sm:py-2.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-8 gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:h-9 sm:text-xs",
+                    dockEditing && "bg-primary/15 text-primary",
+                  )}
+                  onClick={() => setDockEditing((e) => !e)}
+                >
+                  <Pencil className="size-3.5" />
+                  {dockEditing ? "Listo" : "Editar"}
+                </Button>
+                <div className="mx-1 h-6 w-px bg-border/80" />
+                <div className="flex items-center gap-2 sm:gap-3">
+                  {favoriteIds.slice(0, MAX_MENU_FAVORITES).map((id) => {
+                    const item = getMenuItemById(id)
+                    if (!item) return null
+                    const Icon = item.icon
+                    const href = resolveMenuHref(item, popSlug)
+                    return (
+                      <div key={id} className="relative">
+                        {dockEditing ? (
+                          <button
+                            type="button"
+                            aria-label={`Quitar ${item.name} del dock`}
+                            className="absolute -right-1 -top-1 z-30 flex size-5 items-center justify-center rounded-full border border-rose-300/80 bg-rose-600 text-white shadow-md"
+                            onClick={() => removeFavoriteFromDock(id)}
+                          >
+                            <Minus className="size-3" strokeWidth={2.5} />
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (dockEditing) return
+                            if (href) router.push(href)
+                          }}
+                          className={cn(
+                            "group relative flex flex-col items-center gap-1 transition-all duration-200 hover:scale-110 hover:-translate-y-1 active:scale-95",
+                            dockEditing && "rootsy-dock-edit-wiggle",
+                          )}
+                        >
+                          <div className="relative flex size-11 items-center justify-center overflow-hidden rounded-xl bg-linear-to-br from-emerald-500/85 to-teal-600/90 shadow-md ring-1 ring-white/15 sm:size-12">
+                            <div className="absolute inset-0 bg-linear-to-tr from-transparent via-white/25 to-transparent opacity-0 transition-all duration-500 group-hover:opacity-100" />
+                            <Icon className="relative size-6 text-white drop-shadow" />
+                          </div>
+                          <div className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-[10px] font-medium text-white opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100 sm:block">
+                            {item.name}
+                          </div>
+                        </button>
                       </div>
-                    </MenuGridScrollArea>
-                    {items.length === 0 ? (
-                      <p className="mt-16 text-center text-sm text-muted-foreground">
-                        No hay ítems en {slide.title}
-                        {searchQuery.trim()
-                          ? ` para “${searchQuery}”.`
-                          : "."}
-                      </p>
-                    ) : null}
-                  </div>
-                )
-              })}
+                    )
+                  })}
+                  {Array.from({
+                    length: Math.max(
+                      0,
+                      MAX_MENU_FAVORITES - favoriteIds.length,
+                    ),
+                  }).map((_, i) => (
+                    <div
+                      key={`empty-${i}`}
+                      className="flex size-11 items-center justify-center rounded-xl border border-dashed border-foreground/15 bg-muted/30 sm:size-12"
+                      aria-hidden
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-20 flex justify-center px-3 pb-4 pt-6 sm:pb-5">
-        <div className="pointer-events-auto flex flex-col items-center gap-2">
-          <div className="flex items-center gap-2 rounded-2xl border border-border/80 bg-muted/95 px-2 py-2 shadow-lg backdrop-blur-2xl sm:px-4 sm:py-2.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-8 gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:h-9 sm:text-xs",
-                dockEditing && "bg-primary/15 text-primary",
-              )}
-              onClick={() => setDockEditing((e) => !e)}
-            >
-              <Pencil className="size-3.5" />
-              {dockEditing ? "Listo" : "Editar"}
-            </Button>
-            <div className="mx-1 h-6 w-px bg-border/80" />
-            <div className="flex items-center gap-2 sm:gap-3">
-              {favoriteIds.slice(0, MAX_MENU_FAVORITES).map((id) => {
-                const item = getMenuItemById(id)
-                if (!item) return null
-                const Icon = item.icon
-                const href = resolveMenuHref(item, popSlug)
-                return (
-                  <div key={id} className="relative">
-                    {dockEditing ? (
-                      <button
-                        type="button"
-                        aria-label={`Quitar ${item.name} del dock`}
-                        className="absolute -right-1 -top-1 z-30 flex size-5 items-center justify-center rounded-full border border-rose-300/80 bg-rose-600 text-white shadow-md"
-                        onClick={() => removeFavoriteFromDock(id)}
-                      >
-                        <Minus className="size-3" strokeWidth={2.5} />
-                      </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (dockEditing) return
-                        if (href) router.push(href)
-                      }}
-                      className={cn(
-                        "group relative flex flex-col items-center gap-1 transition-all duration-200 hover:scale-110 hover:-translate-y-1 active:scale-95",
-                        dockEditing && "rootsy-dock-edit-wiggle",
-                      )}
-                    >
-                      <div className="relative flex size-11 items-center justify-center overflow-hidden rounded-xl bg-linear-to-br from-emerald-500/85 to-teal-600/90 shadow-md ring-1 ring-white/15 sm:size-12">
-                        <div className="absolute inset-0 bg-linear-to-tr from-transparent via-white/25 to-transparent opacity-0 transition-all duration-500 group-hover:opacity-100" />
-                        <Icon className="relative size-6 text-white drop-shadow" />
-                      </div>
-                      <div className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-[10px] font-medium text-white opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100 sm:block">
-                        {item.name}
-                      </div>
-                    </button>
-                  </div>
-                )
-              })}
-              {Array.from({
-                length: Math.max(
-                  0,
-                  MAX_MENU_FAVORITES - favoriteIds.length,
-                ),
-              }).map((_, i) => (
-                <div
-                  key={`empty-${i}`}
-                  className="flex size-11 items-center justify-center rounded-xl border border-dashed border-foreground/15 bg-muted/30 sm:size-12"
-                  aria-hidden
-                />
-              ))}
-            </div>
-          </div>
-          <p className="max-w-xs text-center text-[10px] text-muted-foreground">
-            Favoritos: hasta {MAX_MENU_FAVORITES}. Estrella en cada tarjeta para
-            agregar; en Editar, tocá menos para quitar.
-          </p>
-        </div>
       </div>
 
       <button
         type="button"
-        className="group absolute bottom-4 right-4 z-20 flex size-11 items-center justify-center rounded-full border border-border bg-muted/95 backdrop-blur-xl transition-all hover:bg-muted active:scale-95 sm:size-12"
+        className="group absolute bottom-4 right-4 z-30 flex size-11 items-center justify-center rounded-full border border-border bg-muted/95 backdrop-blur-xl transition-all hover:bg-muted active:scale-95 sm:size-12"
         aria-label="Ayuda"
       >
         <HelpCircle className="size-5 text-muted-foreground group-hover:text-foreground/80" />
