@@ -626,8 +626,8 @@ export default function MenuPage() {
             "linear-gradient(to bottom, rgb(255 255 255 / 0.1), rgb(12 15 14 / 0.24))",
         }}
       >
-        <div className="flex items-center justify-between px-4 py-4 sm:px-8 sm:py-5">
-          <div className="flex min-w-0 items-center gap-3 sm:gap-6">
+        <div className="flex items-center justify-between gap-2 px-4 py-4 sm:px-8 sm:py-5 md:grid md:grid-cols-3 md:items-center md:justify-items-stretch md:gap-2 lg:gap-3">
+          <div className="flex min-w-0 items-center justify-self-stretch gap-2 sm:gap-4 lg:gap-6">
             <Link
               href="/"
               className="group flex size-11 shrink-0 items-center justify-center rounded-xl border border-foreground/[0.06] bg-secondary transition-all hover:border-foreground/[0.12] hover:bg-muted active:scale-95 sm:size-12"
@@ -635,9 +635,9 @@ export default function MenuPage() {
               <Home className="size-5 text-foreground/50 transition-colors group-hover:text-foreground/80" />
             </Link>
 
-            <div className="hidden h-6 w-px bg-border sm:block" />
+            <div className="hidden h-6 w-px shrink-0 bg-border sm:block" />
 
-            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
               <div className="size-11 shrink-0 overflow-hidden rounded-2xl ring-1 ring-border sm:size-14">
                 <img
                   src="https://api.dicebear.com/7.x/shapes/svg?seed=store1&backgroundColor=1a1f1d"
@@ -645,19 +645,24 @@ export default function MenuPage() {
                   className="size-full object-cover"
                 />
               </div>
-              <div className="min-w-0 flex flex-col gap-0.5">
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="truncate text-sm font-bold tracking-tight text-foreground sm:text-base">
                   Sucursal Centro
                 </span>
-                <span className="hidden items-center gap-1.5 text-sm text-muted-foreground sm:flex">
+                <span
+                  className="hidden min-w-0 items-center gap-1.5 truncate text-sm text-muted-foreground sm:flex"
+                  title="Av. Principal 1234, Buenos Aires"
+                >
                   <MapPin className="size-3.5 shrink-0" />
-                  Av. Principal 1234, Buenos Aires
+                  <span className="truncate">
+                    Av. Principal 1234, Buenos Aires
+                  </span>
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="mx-2 hidden min-w-0 max-w-[min(420px,32vw)] flex-1 justify-center md:flex">
+          <div className="hidden min-w-0 w-full flex-col justify-center md:flex md:px-1">
             {showSearch ? (
               <div className="relative w-full animate-in zoom-in-95 duration-200">
                 <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-foreground/30" />
@@ -697,7 +702,7 @@ export default function MenuPage() {
             )}
           </div>
 
-          <div className="flex shrink-0 items-center gap-2 sm:gap-6">
+          <div className="flex min-w-0 items-center justify-end gap-1 sm:gap-3 lg:gap-6">
             <div className="flex items-center gap-0.5 sm:gap-1">
               <button
                 type="button"
@@ -725,7 +730,7 @@ export default function MenuPage() {
 
             <div className="hidden h-6 w-px bg-border sm:block" />
 
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               <div className="relative shrink-0">
                 <div className="size-10 overflow-hidden rounded-xl ring-1 ring-border sm:size-11">
                   <img
@@ -736,11 +741,11 @@ export default function MenuPage() {
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-card bg-primary" />
               </div>
-              <div className="hidden flex-col sm:flex">
-                <span className="text-sm font-semibold text-foreground">
+              <div className="hidden min-w-0 flex-col sm:flex">
+                <span className="truncate text-sm font-semibold text-foreground">
                   María García
                 </span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-meadow">
+                <span className="truncate text-[10px] font-semibold uppercase tracking-wider text-meadow">
                   Admin
                 </span>
               </div>
