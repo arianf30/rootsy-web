@@ -2,10 +2,19 @@
 
 import {
   createChartAccount,
+  getAccountingEntryLines,
+  getAccountingFinancialSummaries,
+  getAccountingJournalEntries,
+  getAccountingLedgerForAccount,
   getAccountingPageData,
+  getAccountingTrialBalance,
   type AccountType,
   type ChartAccountRow,
   type CreateChartAccountInput,
+  type JournalEntryLineRow,
+  type JournalEntrySummaryRow,
+  type LedgerMovementRow,
+  type TrialBalanceRow,
 } from "@/app/[siteId]/[popId]/accounting/actions"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -60,15 +69,58 @@ import {
 } from "react"
 
 const ACCOUNT_TYPES: { value: AccountType; label: string }[] = [
-  { value: "activo_corriente", label: "Current assets" },
-  { value: "activo_no_corriente", label: "Non-current assets" },
-  { value: "pasivo_corriente", label: "Current liabilities" },
-  { value: "pasivo_no_corriente", label: "Non-current liabilities" },
-  { value: "patrimonio_neto", label: "Equity" },
-  { value: "ingresos", label: "Revenue" },
-  { value: "costos", label: "Cost of sales" },
-  { value: "gastos", label: "Expenses" },
+  { value: "activo_corriente", label: "Activo corriente" },
+  { value: "activo_no_corriente", label: "Activo no corriente" },
+  { value: "pasivo_corriente", label: "Pasivo corriente" },
+  { value: "pasivo_no_corriente", label: "Pasivo no corriente" },
+  { value: "patrimonio_neto", label: "Patrimonio neto" },
+  { value: "ingresos", label: "Ingresos" },
+  { value: "costos", label: "Costos" },
+  { value: "gastos", label: "Gastos" },
 ]
+
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  sale: "Venta",
+  purchase: "Compra",
+  manual: "Manual",
+  adjustment: "Ajuste",
+  payment: "Cobro / pago",
+  opening: "Apertura",
+  closing: "Cierre",
+}
+
+function formatSourceType(s: string): string {
+  return SOURCE_TYPE_LABELS[s] ?? s
+}
+
+function formatNatureLabel(n: string): string {
+  if (n === "acreedora") return "Acreedora"
+  if (n === "deudora") return "Deudora"
+  return n
+}
+
+function formatMoneyAr(n: number) {
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n)
+}
+
+function formatIsoDate(iso: string) {
+  if (!iso) return "—"
+  const d = new Date(`${iso}T12:00:00`)
+  if (Number.isNaN(d.getTime())) return iso
+  return new Intl.DateTimeFormat("es", { dateStyle: "short" }).format(d)
+}
+
+function defaultMonthRange(): { from: string; to: string } {
+  const now = new Date()
+  const first = new Date(now.getFullYear(), now.getMonth(), 1)
+  const iso = (d: Date) => d.toISOString().slice(0, 10)
+  return { from: iso(first), to: iso(now) }
+}
 
 function defaultCreateForm(): CreateChartAccountInput {
   return {
@@ -218,12 +270,129 @@ function AccountingPage() {
   const [ledgerTo, setLedgerTo] = useState("")
   const [ledgerAccountCode, setLedgerAccountCode] = useState("")
 
+  const [reportFrom, setReportFrom] = useState("")
+  const [reportTo, setReportTo] = useState("")
+
+  const [journalEntries, setJournalEntries] = useState<JournalEntrySummaryRow[]>(
+    [],
+  )
+  const [journalBusy, setJournalBusy] = useState(false)
+  const [journalDetailOpen, setJournalDetailOpen] = useState(false)
+  const [journalDetailLines, setJournalDetailLines] = useState<
+    JournalEntryLineRow[]
+  >([])
+  const [journalDetailTitle, setJournalDetailTitle] = useState("")
+  const [journalDetailLoading, setJournalDetailLoading] = useState(false)
+  const [journalDetailError, setJournalDetailError] = useState<string | null>(
+    null,
+  )
+
+  const [ledgerRows, setLedgerRows] = useState<LedgerMovementRow[]>([])
+  const [ledgerAccountName, setLedgerAccountName] = useState("")
+  const [ledgerNature, setLedgerNature] = useState("")
+  const [ledgerBusy, setLedgerBusy] = useState(false)
+  const [ledgerError, setLedgerError] = useState<string | null>(null)
+
+  const [trialRows, setTrialRows] = useState<TrialBalanceRow[]>([])
+  const [financialSummaries, setFinancialSummaries] = useState<
+    { label: string; total: number }[]
+  >([])
+  const [reportsBusy, setReportsBusy] = useState(false)
+
   const [isOnline, setIsOnline] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   const accountSections = useMemo(
     () => buildAccountSections(accounts),
     [accounts],
+  )
+
+  useEffect(() => {
+    const { from, to } = defaultMonthRange()
+    setJournalFrom(from)
+    setJournalTo(to)
+    setLedgerFrom(from)
+    setLedgerTo(to)
+    setReportFrom(from)
+    setReportTo(to)
+  }, [])
+
+  const loadJournal = useCallback(async () => {
+    if (!popId) return
+    setJournalBusy(true)
+    const res = await getAccountingJournalEntries(
+      popId,
+      journalFrom || null,
+      journalTo || null,
+    )
+    setJournalBusy(false)
+    if (res.success) {
+      setJournalEntries(res.entries)
+    }
+  }, [popId, journalFrom, journalTo])
+
+  const loadReports = useCallback(async () => {
+    if (!popId) return
+    setReportsBusy(true)
+    const [tb, fs] = await Promise.all([
+      getAccountingTrialBalance(popId, reportFrom || null, reportTo || null),
+      getAccountingFinancialSummaries(
+        popId,
+        reportFrom || null,
+        reportTo || null,
+      ),
+    ])
+    setReportsBusy(false)
+    if (tb.success) {
+      setTrialRows(tb.rows)
+    }
+    if (fs.success) {
+      setFinancialSummaries(fs.summaries.map((s) => ({ label: s.label, total: s.total })))
+    }
+  }, [popId, reportFrom, reportTo])
+
+  const loadLedger = useCallback(async () => {
+    if (!popId) return
+    setLedgerBusy(true)
+    setLedgerError(null)
+    const res = await getAccountingLedgerForAccount(
+      popId,
+      ledgerAccountCode,
+      ledgerFrom || null,
+      ledgerTo || null,
+    )
+    setLedgerBusy(false)
+    if (res.success) {
+      setLedgerRows(res.rows)
+      setLedgerAccountName(res.accountName)
+      setLedgerNature(res.nature === "deudora" ? "Deudora" : "Acreedora")
+    } else {
+      setLedgerRows([])
+      setLedgerAccountName("")
+      setLedgerNature("")
+      setLedgerError(res.error)
+    }
+  }, [popId, ledgerAccountCode, ledgerFrom, ledgerTo])
+
+  const openJournalDetail = useCallback(
+    async (entry: JournalEntrySummaryRow) => {
+      if (!popId) return
+      setJournalDetailOpen(true)
+      setJournalDetailTitle(
+        `Asiento n.º ${entry.entryNumber} · ${formatIsoDate(entry.entryDate)}`,
+      )
+      setJournalDetailLoading(true)
+      setJournalDetailLines([])
+      setJournalDetailError(null)
+      const res = await getAccountingEntryLines(popId, entry.id)
+      setJournalDetailLoading(false)
+      if (res.success) {
+        setJournalDetailLines(res.lines)
+      } else {
+        setJournalDetailError(res.error)
+      }
+    },
+    [popId],
   )
 
   const load = useCallback(async () => {
@@ -246,10 +415,35 @@ function AccountingPage() {
     setError(null)
   }, [popId, siteId])
 
+  const booksInit = useRef(false)
+  useEffect(() => {
+    if (
+      !popId ||
+      !journalFrom ||
+      !journalTo ||
+      loading ||
+      error ||
+      booksInit.current
+    ) {
+      return
+    }
+    booksInit.current = true
+    void loadJournal()
+    void loadReports()
+  }, [
+    popId,
+    journalFrom,
+    journalTo,
+    loading,
+    error,
+    loadJournal,
+    loadReports,
+  ])
+
   useEffect(() => {
     if (!popId || !siteId) {
       setLoading(false)
-      setError("Store ID not found")
+      setError("No se encontró el punto de venta.")
       return
     }
     let cancelled = false
@@ -259,7 +453,7 @@ function AccountingPage() {
       try {
         await load()
       } catch {
-        if (!cancelled) setError("Unexpected error")
+        if (!cancelled) setError("Error inesperado")
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -320,7 +514,7 @@ function AccountingPage() {
   const headerUserName = useMemo(() => {
     const meta = user?.user_metadata?.full_name
     if (typeof meta === "string" && meta.trim()) return meta.trim()
-    return user?.email?.split("@")[0] || "User"
+    return user?.email?.split("@")[0] || "Usuario"
   }, [user?.email, user?.user_metadata?.full_name])
 
   const userAvatarSrc =
@@ -332,7 +526,7 @@ function AccountingPage() {
   if (!popId || !siteId) {
     return (
       <div className="rootsy-app-light min-h-screen bg-background p-10 text-foreground">
-        <p className="text-sm">Store ID not found</p>
+        <p className="text-sm">No se encontró el punto de venta.</p>
       </div>
     )
   }
@@ -354,7 +548,7 @@ function AccountingPage() {
               <Link
                 href={popMenuHref(siteId, popId)}
                 className="group inline-flex size-10 items-center justify-center rounded-xl border border-foreground/10 bg-secondary text-foreground/70 transition-all hover:border-primary/25 hover:bg-muted hover:text-foreground"
-                aria-label="Back to menu"
+                aria-label="Volver al menú"
               >
                 <ArrowLeft className="size-5 transition-transform group-hover:-translate-x-0.5" />
               </Link>
@@ -378,7 +572,7 @@ function AccountingPage() {
                 <span className="inline-flex size-9 items-center justify-center rounded-xl bg-primary/15 text-primary">
                   <Landmark className="size-5" aria-hidden />
                 </span>
-                Accounting
+                Contabilidad
               </h1>
               <div
                 className={cn(
@@ -393,7 +587,7 @@ function AccountingPage() {
                 ) : (
                   <WifiOff className="size-3" aria-hidden />
                 )}
-                {isOnline ? "Online" : "Offline"}
+                {isOnline ? "En línea" : "Sin conexión"}
               </div>
             </div>
 
@@ -406,14 +600,14 @@ function AccountingPage() {
                   onClick={() => openCreate()}
                 >
                   <Plus className="size-4" aria-hidden />
-                  <span className="hidden sm:inline">Add account</span>
+                  <span className="hidden sm:inline">Nueva cuenta</span>
                 </Button>
               ) : null}
               <button
                 type="button"
                 onClick={() => void toggleFullscreen()}
                 className="group inline-flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               >
                 {isFullscreen ? (
                   <Minimize2 className="size-4.5" />
@@ -435,7 +629,7 @@ function AccountingPage() {
                   </span>
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-meadow">
                     <Leaf className="size-3" aria-hidden />
-                    Accounting
+                    Contabilidad
                   </span>
                 </div>
               </div>
@@ -445,7 +639,7 @@ function AccountingPage() {
 
         <main className="relative z-10 mx-auto w-full max-w-6xl flex-1 space-y-10 px-4 py-8 sm:px-6">
           {loading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="text-sm text-muted-foreground">Cargando…</p>
           ) : error ? (
             <div className="rounded-2xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm text-destructive">
               {error}
@@ -455,7 +649,7 @@ function AccountingPage() {
               <section className="space-y-4">
                 <div>
                   <h2 className="text-lg font-semibold text-foreground">
-                    Chart of accounts
+                    Plan de cuentas
                   </h2>
                   <p className="max-w-2xl text-sm text-muted-foreground">
                     Las cuentas existentes son solo lectura. El encabezado de
@@ -472,7 +666,7 @@ function AccountingPage() {
                             colSpan={6}
                             className="py-10 text-center text-muted-foreground"
                           >
-                            No accounts yet.
+                            Todavía no hay cuentas en este punto.
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -533,8 +727,8 @@ function AccountingPage() {
                                 <TableCell className="text-muted-foreground text-sm">
                                   {formatAccountType(r.accountType)}
                                 </TableCell>
-                                <TableCell className="text-muted-foreground text-sm capitalize">
-                                  {r.nature}
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {formatNatureLabel(r.nature)}
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums text-muted-foreground">
                                   {r.level}
@@ -552,35 +746,51 @@ function AccountingPage() {
                 )}
               </section>
 
-              <section className="space-y-4">
+              <section className="space-y-6">
                 <div>
                   <h2 className="text-lg font-semibold text-foreground">
-                    Books &amp; reports
+                    Libros y reportes
                   </h2>
                   <p className="max-w-2xl text-sm text-muted-foreground">
-                    Journal, general ledger, and financial statements will use
-                    posted entries. No operations are wired yet; filters are
-                    ready for when data exists.
+                    Solo se listan asientos con estado <strong className="text-foreground">publicado</strong>
+                    . Los importes se expresan en la moneda del plan (ARS). Total
+                    de asientos en el punto:{" "}
+                    <span className="font-mono text-foreground">{journalEntryCount}</span>.
                   </p>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-3">
-                  <div className="rounded-2xl border border-border bg-card/95 p-5 shadow-sm">
-                    <div className="mb-3 flex items-center gap-2 text-foreground">
+
+                <div className="rounded-2xl border border-border bg-card/95 p-5 shadow-sm">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-foreground">
                       <ScrollText className="size-5 text-primary" aria-hidden />
-                      <h3 className="font-semibold">Journal (day book)</h3>
+                      <h3 className="font-semibold">Libro diario</h3>
                     </div>
-                    <p className="mb-4 text-sm text-muted-foreground">
-                      Chronological list of journal entries for a date range.
-                    </p>
-                    <div className="space-y-2">
-                      <Label className="text-xs">From</Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="rounded-lg"
+                      disabled={journalBusy}
+                      onClick={() => void loadJournal()}
+                    >
+                      {journalBusy ? "Cargando…" : "Actualizar"}
+                    </Button>
+                  </div>
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    Listado cronológico de asientos en el rango elegido.
+                  </p>
+                  <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Desde</Label>
                       <Input
                         type="date"
                         value={journalFrom}
                         onChange={(e) => setJournalFrom(e.target.value)}
                         className="bg-background"
                       />
-                      <Label className="text-xs">To</Label>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Hasta</Label>
                       <Input
                         type="date"
                         value={journalTo}
@@ -588,37 +798,104 @@ function AccountingPage() {
                         className="bg-background"
                       />
                     </div>
-                    <p className="mt-4 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                      {journalEntryCount === 0
-                        ? "No journal entries in this store yet."
-                        : `${journalEntryCount} entr${journalEntryCount === 1 ? "y" : "ies"} total — detailed view coming soon.`}
-                    </p>
                   </div>
+                  <div className="overflow-x-auto rounded-xl border border-border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Fecha</TableHead>
+                          <TableHead>N.º</TableHead>
+                          <TableHead>Descripción</TableHead>
+                          <TableHead>Origen</TableHead>
+                          <TableHead className="text-right">Debe</TableHead>
+                          <TableHead className="text-right">Haber</TableHead>
+                          <TableHead className="w-[88px]" />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {journalBusy && journalEntries.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-muted-foreground">
+                              Cargando asientos…
+                            </TableCell>
+                          </TableRow>
+                        ) : journalEntries.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-muted-foreground">
+                              No hay asientos publicados en este rango.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          journalEntries.map((e) => (
+                            <TableRow key={e.id}>
+                              <TableCell className="whitespace-nowrap text-sm">
+                                {formatIsoDate(e.entryDate)}
+                              </TableCell>
+                              <TableCell className="font-mono text-sm tabular-nums">
+                                {e.entryNumber}
+                              </TableCell>
+                              <TableCell className="max-w-[200px] truncate text-sm">
+                                {e.description}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {formatSourceType(e.sourceType)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm tabular-nums">
+                                {formatMoneyAr(e.totalDebit)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm tabular-nums">
+                                {formatMoneyAr(e.totalCredit)}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 text-xs"
+                                  onClick={() => void openJournalDetail(e)}
+                                >
+                                  Ver líneas
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
 
-                  <div className="rounded-2xl border border-border bg-card/95 p-5 shadow-sm">
-                    <div className="mb-3 flex items-center gap-2 text-foreground">
-                      <BookMarked className="size-5 text-primary" aria-hidden />
-                      <h3 className="font-semibold">General ledger</h3>
-                    </div>
-                    <p className="mb-4 text-sm text-muted-foreground">
-                      Movements for one account between two dates.
-                    </p>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Account code</Label>
+                <div className="rounded-2xl border border-border bg-card/95 p-5 shadow-sm">
+                  <div className="mb-3 flex items-center gap-2 text-foreground">
+                    <BookMarked className="size-5 text-primary" aria-hidden />
+                    <h3 className="font-semibold">Mayor general</h3>
+                  </div>
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    Movimientos de una cuenta imputable en el período. El saldo
+                    acumulado respeta la naturaleza de la cuenta (deudora /
+                    acreedora).
+                  </p>
+                  <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="space-y-1 lg:col-span-2">
+                      <Label className="text-xs">Código de cuenta</Label>
                       <Input
-                        placeholder="e.g. 1.1.1.01"
+                        placeholder="Ej. 1.1.1.01"
                         value={ledgerAccountCode}
                         onChange={(e) => setLedgerAccountCode(e.target.value)}
                         className="bg-background font-mono"
                       />
-                      <Label className="text-xs">From</Label>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Desde</Label>
                       <Input
                         type="date"
                         value={ledgerFrom}
                         onChange={(e) => setLedgerFrom(e.target.value)}
                         className="bg-background"
                       />
-                      <Label className="text-xs">To</Label>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Hasta</Label>
                       <Input
                         type="date"
                         value={ledgerTo}
@@ -626,51 +903,263 @@ function AccountingPage() {
                         className="bg-background"
                       />
                     </div>
-                    <p className="mt-4 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                      Ledger drill-down will appear once entries are posted from
-                      operations.
-                    </p>
                   </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="mb-4 rounded-lg"
+                    disabled={ledgerBusy}
+                    onClick={() => void loadLedger()}
+                  >
+                    {ledgerBusy ? "Cargando…" : "Ver movimientos"}
+                  </Button>
+                  {ledgerError ? (
+                    <p className="mb-4 rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                      {ledgerError}
+                    </p>
+                  ) : null}
+                  {ledgerAccountName ? (
+                    <p className="mb-2 text-sm text-foreground">
+                      <span className="font-semibold">{ledgerAccountName}</span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · Naturaleza: {ledgerNature}
+                      </span>
+                    </p>
+                  ) : null}
+                  <div className="overflow-x-auto rounded-xl border border-border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Fecha</TableHead>
+                          <TableHead>N.º asiento</TableHead>
+                          <TableHead>Ref. asiento</TableHead>
+                          <TableHead className="text-right">Debe</TableHead>
+                          <TableHead className="text-right">Haber</TableHead>
+                          <TableHead className="text-right">Saldo</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {ledgerRows.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-muted-foreground">
+                              {ledgerAccountCode.trim()
+                                ? "Sin movimientos o indicá un código válido y pulsá «Ver movimientos»."
+                                : "Ingresá un código de cuenta y el rango de fechas."}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          ledgerRows.map((r) => (
+                            <TableRow key={r.id}>
+                              <TableCell className="whitespace-nowrap text-sm">
+                                {formatIsoDate(r.entryDate)}
+                              </TableCell>
+                              <TableCell className="font-mono text-sm tabular-nums">
+                                {r.entryNumber}
+                              </TableCell>
+                              <TableCell className="max-w-[180px] truncate text-sm text-muted-foreground">
+                                {r.entryDescription}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm tabular-nums">
+                                {formatMoneyAr(r.debitAmount)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm tabular-nums">
+                                {formatMoneyAr(r.creditAmount)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm tabular-nums">
+                                {formatMoneyAr(r.runningBalance)}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
 
-                  <div className="rounded-2xl border border-border bg-card/95 p-5 shadow-sm">
-                    <div className="mb-3 flex items-center gap-2 text-foreground">
-                      <FileSpreadsheet
-                        className="size-5 text-primary"
-                        aria-hidden
-                      />
-                      <h3 className="font-semibold">Financial reports</h3>
+                <div className="rounded-2xl border border-border bg-card/95 p-5 shadow-sm">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-foreground">
+                      <FileSpreadsheet className="size-5 text-primary" aria-hidden />
+                      <h3 className="font-semibold">Estados y sumas y saldos</h3>
                     </div>
-                    <p className="mb-4 text-sm text-muted-foreground">
-                      Statement of financial position, income statement, and
-                      trial balance.
-                    </p>
-                    <ul className="space-y-2 text-sm text-foreground/90">
-                      <li className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-                        <span>Balance sheet</span>
-                        <span className="text-xs text-muted-foreground">
-                          Soon
-                        </span>
-                      </li>
-                      <li className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-                        <span>Income statement</span>
-                        <span className="text-xs text-muted-foreground">
-                          Soon
-                        </span>
-                      </li>
-                      <li className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-                        <span>Trial balance</span>
-                        <span className="text-xs text-muted-foreground">
-                          Soon
-                        </span>
-                      </li>
-                    </ul>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="rounded-lg"
+                      disabled={reportsBusy}
+                      onClick={() => void loadReports()}
+                    >
+                      {reportsBusy ? "Cargando…" : "Actualizar"}
+                    </Button>
                   </div>
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    Resúmenes por tipo de cuenta y sumas y saldos según movimientos
+                    publicados en el rango (saldo = debe − haber ajustado por
+                    naturaleza).
+                  </p>
+                  <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Desde</Label>
+                      <Input
+                        type="date"
+                        value={reportFrom}
+                        onChange={(e) => setReportFrom(e.target.value)}
+                        className="bg-background"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Hasta</Label>
+                      <Input
+                        type="date"
+                        value={reportTo}
+                        onChange={(e) => setReportTo(e.target.value)}
+                        className="bg-background"
+                      />
+                    </div>
+                  </div>
+                  <div className="mb-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {financialSummaries.map((s) => (
+                      <div
+                        key={s.label}
+                        className="flex flex-col rounded-xl border border-border/60 bg-muted/20 px-3 py-2"
+                      >
+                        <span className="text-xs text-muted-foreground">{s.label}</span>
+                        <span className="font-mono text-base font-semibold tabular-nums text-foreground">
+                          {formatMoneyAr(s.total)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <h4 className="mb-2 text-sm font-semibold text-foreground">
+                    Sumas y saldos
+                  </h4>
+                  <div className="overflow-x-auto rounded-xl border border-border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Código</TableHead>
+                          <TableHead>Cuenta</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead className="text-right">Debe</TableHead>
+                          <TableHead className="text-right">Haber</TableHead>
+                          <TableHead className="text-right">Saldo</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {trialRows.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-muted-foreground">
+                              No hay movimientos publicados en el rango o aún no hay
+                              datos.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          trialRows.map((r, idx) => (
+                            <TableRow key={`${r.accountCode}-${idx}`}>
+                              <TableCell className="font-mono text-sm">{r.accountCode}</TableCell>
+                              <TableCell className="text-sm">{r.accountName}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {formatAccountType(r.accountType)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm tabular-nums">
+                                {formatMoneyAr(r.sumDebit)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm tabular-nums">
+                                {formatMoneyAr(r.sumCredit)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm tabular-nums">
+                                {formatMoneyAr(r.balance)}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Situación patrimonial: activo, pasivo y patrimonio neto son
+                    totales por tipo de cuenta. Resultados: ingresos, costos y
+                    gastos por separado; el resultado del ejercicio se obtiene con
+                    el criterio contable que defina tu equipo.
+                  </p>
                 </div>
               </section>
             </>
           )}
         </main>
       </div>
+
+      <Dialog
+        open={journalDetailOpen}
+        onOpenChange={(o) => {
+          if (!o) {
+            setJournalDetailOpen(false)
+            setJournalDetailError(null)
+          }
+        }}
+      >
+        <DialogContent
+          data-rootsy-light-shell="true"
+          showCloseButton
+          className="max-h-[min(90vh,560px)] overflow-y-auto border-border bg-card text-foreground sm:max-w-lg"
+        >
+          <DialogHeader>
+            <DialogTitle>Líneas del asiento</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{journalDetailTitle}</p>
+          {journalDetailError ? (
+            <p className="rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {journalDetailError}
+            </p>
+          ) : null}
+          {journalDetailLoading ? (
+            <p className="text-sm text-muted-foreground">Cargando líneas…</p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cuenta</TableHead>
+                    <TableHead className="text-right">Debe</TableHead>
+                    <TableHead className="text-right">Haber</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {journalDetailLines.length === 0 && !journalDetailError ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-muted-foreground">
+                        Sin líneas.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    journalDetailLines.map((ln) => (
+                      <TableRow key={ln.id}>
+                        <TableCell>
+                          <span className="font-mono text-xs">{ln.accountCode}</span>{" "}
+                          <span className="text-sm">{ln.accountName}</span>
+                          {ln.lineDescription ? (
+                            <span className="mt-0.5 block text-xs text-muted-foreground">
+                              {ln.lineDescription}
+                            </span>
+                          ) : null}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm tabular-nums">
+                          {ln.debitAmount > 0 ? formatMoneyAr(ln.debitAmount) : "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm tabular-nums">
+                          {ln.creditAmount > 0 ? formatMoneyAr(ln.creditAmount) : "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createOpen} onOpenChange={(o) => !o && setCreateOpen(false)}>
         <DialogContent
@@ -679,7 +1168,7 @@ function AccountingPage() {
           className="border-border bg-card text-foreground sm:max-w-md"
         >
           <DialogHeader>
-            <DialogTitle>Add account</DialogTitle>
+            <DialogTitle>Nueva cuenta</DialogTitle>
           </DialogHeader>
           {createBanner ? (
             <p className="rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -688,7 +1177,7 @@ function AccountingPage() {
           ) : null}
           <form className="space-y-4" onSubmit={(e) => void submitCreate(e)}>
             <div className="space-y-2">
-              <Label htmlFor="acc-code">Code</Label>
+              <Label htmlFor="acc-code">Código</Label>
               <Input
                 id="acc-code"
                 value={createForm.code}
@@ -700,7 +1189,7 @@ function AccountingPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="acc-name">Name</Label>
+              <Label htmlFor="acc-name">Nombre</Label>
               <Input
                 id="acc-name"
                 value={createForm.name}
@@ -712,7 +1201,7 @@ function AccountingPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="acc-type">Account type</Label>
+              <Label htmlFor="acc-type">Tipo de cuenta</Label>
               <select
                 id="acc-type"
                 value={createForm.accountType}
@@ -732,7 +1221,7 @@ function AccountingPage() {
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="acc-nature">Nature</Label>
+              <Label htmlFor="acc-nature">Naturaleza</Label>
               <select
                 id="acc-nature"
                 value={createForm.nature}
@@ -744,12 +1233,12 @@ function AccountingPage() {
                 }
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <option value="deudora">Debit nature (deudora)</option>
-                <option value="acreedora">Credit nature (acreedora)</option>
+                <option value="deudora">Deudora</option>
+                <option value="acreedora">Acreedora</option>
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="acc-level">Level</Label>
+              <Label htmlFor="acc-level">Nivel</Label>
               <Input
                 id="acc-level"
                 type="number"
@@ -776,7 +1265,7 @@ function AccountingPage() {
                 }
                 className="size-4 rounded border-input"
               />
-              Movement account
+              Cuenta de movimiento
             </label>
             <DialogFooter className="gap-2 sm:gap-0">
               <Button
@@ -784,10 +1273,10 @@ function AccountingPage() {
                 variant="outline"
                 onClick={() => setCreateOpen(false)}
               >
-                Cancel
+                Cancelar
               </Button>
               <Button type="submit" disabled={createSaving}>
-                {createSaving ? "Saving…" : "Create"}
+                {createSaving ? "Guardando…" : "Crear"}
               </Button>
             </DialogFooter>
           </form>
