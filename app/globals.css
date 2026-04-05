@@ -420,15 +420,15 @@
   @keyframes rootsy-dock-wiggle {
     0%,
     100% {
-      transform: rotate(-1.2deg);
+      transform: rotate(-2.1deg) translateY(2px);
     }
     50% {
-      transform: rotate(1.2deg);
+      transform: rotate(2.1deg) translateY(-2px);
     }
   }
 
   .rootsy-dock-edit-wiggle {
-    animation: rootsy-dock-wiggle 0.38s ease-in-out infinite;
+    animation: rootsy-dock-wiggle 0.42s ease-in-out infinite;
   }
 
   /**

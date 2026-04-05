@@ -1004,29 +1004,20 @@ export default function MenuPage() {
                   type="button"
                   variant="ghost"
                   size="sm"
+                  aria-label={
+                    dockEditing ? "Listo" : "Editar favoritos del dock"
+                  }
                   className={cn(
-                    "h-8 gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:h-9 sm:text-xs",
+                    "h-8 px-2 text-muted-foreground sm:h-9",
                     dockEditing && "bg-primary/15 text-primary",
                   )}
                   onClick={() => setDockEditing((e) => !e)}
                 >
-                  <span className="sr-only sm:hidden">
-                    {dockEditing ? "Listo" : "Editar favoritos del dock"}
-                  </span>
                   {dockEditing ? (
-                    <>
-                      <Check className="size-3.5 sm:hidden" aria-hidden />
-                      <Pencil
-                        className="hidden size-3.5 sm:block"
-                        aria-hidden
-                      />
-                    </>
+                    <Check className="size-3.5 sm:size-4" aria-hidden />
                   ) : (
-                    <Pencil className="size-3.5" aria-hidden />
+                    <Pencil className="size-3.5 sm:size-4" aria-hidden />
                   )}
-                  <span className="hidden sm:inline">
-                    {dockEditing ? "Listo" : "Editar"}
-                  </span>
                 </Button>
                 <div className="mx-1 h-6 w-px bg-border/80" />
                 <div className="flex items-center gap-2 sm:gap-3">
