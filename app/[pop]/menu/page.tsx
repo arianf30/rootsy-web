@@ -325,9 +325,9 @@ function MenuMiniCard({
   const fullLabel = item.name
   const labelHoverSwap = shortLabel !== fullLabel
 
-  /** Base tipográfica del rótulo; el nombre largo (2 líneas) usa interlineado más cerrado. */
+  /** Base tipográfica del rótulo; sombra suave estilo HUD / card gaming. */
   const labelTileClass =
-    "text-pretty text-left text-xs font-semibold tracking-tight text-white/92 sm:text-sm"
+    "text-pretty text-left text-xs font-semibold tracking-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] sm:text-sm"
   const labelLeadingShort = "leading-snug"
   const labelLeadingFull = "leading-[1.15] sm:leading-tight"
 
@@ -339,35 +339,72 @@ function MenuMiniCard({
           onClick={onNavigate}
           title={labelHoverSwap ? fullLabel : undefined}
           className={cn(
-            "group/menu-tile relative z-0 grid h-full min-h-[6.75rem] w-full grid-cols-2 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-2xl border border-white/[0.09] bg-[#121816] p-2.5 text-left sm:min-h-[8rem] sm:p-3",
-            "shadow-[0_10px_28px_-12px_rgba(0,0,0,0.55),inset_0_1px_0_0_rgba(255,255,255,0.05)]",
+            "group/menu-tile relative z-0 grid h-full min-h-[6.75rem] w-full grid-cols-2 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-2xl border border-white/[0.1] bg-gradient-to-b from-[rgb(20_25_22_/0.72)] via-[rgb(17_22_20_/0.66)] to-[rgb(14_18_16_/0.6)] p-2.5 text-left backdrop-blur-[2px] sm:min-h-[8rem] sm:p-3",
+            "shadow-[0_12px_32px_-14px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.06),inset_0_-1px_0_0_rgba(0,0,0,0.26)]",
             "transition-[transform,box-shadow,background-color,border-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-            "hover:-translate-y-0.5 hover:scale-[1.042] hover:border-white/18 hover:bg-[#181f1c]",
-            "hover:shadow-[0_0_0_2px_rgba(255,255,255,0.28),0_0_36px_-10px_rgba(255,255,255,0.12),0_0_48px_-14px_rgba(16,185,129,0.28),0_20px_50px_-18px_rgba(0,0,0,0.7)]",
+            "hover:-translate-y-0.5 hover:scale-[1.042] hover:border-white/16 hover:from-[rgb(22_28_24_/0.78)] hover:via-[rgb(18_24_21_/0.72)] hover:to-[rgb(15_20_17_/0.66)]",
+            "hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_24px_-10px_rgba(52,211,153,0.09),0_22px_44px_-16px_rgba(0,0,0,0.72)]",
             "active:scale-[0.98] active:translate-y-0",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070a09]",
-            "motion-reduce:transition-colors motion-reduce:hover:scale-100 motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-none",
+            "motion-reduce:transition-colors motion-reduce:hover:scale-100 motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-[0_12px_32px_-14px_rgba(0,0,0,0.75)]",
           )}
         >
+          {/* Luz ambiental + viñeta tipo “gaming card” */}
+          <div
+            className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[inherit]"
+            aria-hidden
+          >
+            <div
+              className={cn(
+                "absolute -left-1/3 -top-2/3 h-[140%] w-[85%] rounded-full bg-white/[0.035] motion-reduce:opacity-90",
+                "blur-3xl motion-reduce:blur-none",
+                "transition-[opacity,background-color] duration-300 group-hover/menu-tile:bg-emerald-400/[0.05] group-hover/menu-tile:opacity-100",
+              )}
+            />
+            <div
+              className={cn(
+                "absolute -bottom-1/4 -right-1/4 h-3/5 w-3/5 rounded-full bg-white/[0.025] blur-2xl motion-reduce:blur-none",
+                "opacity-0 transition-opacity duration-300 group-hover/menu-tile:opacity-100",
+              )}
+            />
+            <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-45 group-hover/menu-tile:via-emerald-400/12 motion-reduce:opacity-30" />
+          </div>
+
           {/* Borde superior “iluminado” tipo highlight de tile seleccionada (PS5 / Xbox) */}
           <div
-            className="pointer-events-none absolute inset-x-2.5 top-0 z-[2] h-px rounded-full bg-linear-to-r from-transparent via-white/45 to-transparent opacity-0 transition-opacity duration-300 group-hover/menu-tile:opacity-100 motion-reduce:opacity-0"
+            className="pointer-events-none absolute inset-x-2.5 top-0 z-[2] h-px rounded-full bg-linear-to-r from-transparent via-white/55 to-transparent opacity-0 transition-opacity duration-300 group-hover/menu-tile:opacity-100 motion-reduce:opacity-0"
             aria-hidden
           />
 
-          <div
-            className={cn(
-              "relative z-[1] flex size-8 shrink-0 items-center justify-center justify-self-start rounded-lg bg-white/[0.06] ring-1 ring-white/[0.08] transition-[transform,background-color,box-shadow] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:size-9",
-              "group-hover/menu-tile:scale-105 group-hover/menu-tile:bg-white/[0.11] group-hover/menu-tile:shadow-[0_0_16px_-4px_rgba(52,211,153,0.35)]",
-              "motion-reduce:group-hover/menu-tile:scale-100",
-            )}
-          >
-            <Icon className="size-4 text-emerald-200/90" aria-hidden />
+          <div className="relative z-[1] justify-self-start">
+            {/* Bloom detrás del ícono */}
+            <div
+              className={cn(
+                "pointer-events-none absolute left-1/2 top-1/2 -z-10 size-9 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400/[0.10] motion-reduce:opacity-75",
+                "blur-md motion-reduce:blur-sm",
+                "transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/menu-tile:bg-emerald-400/[0.14] group-hover/menu-tile:opacity-100 group-hover/menu-tile:blur-lg sm:size-10",
+              )}
+              aria-hidden
+            />
+            <div
+              className={cn(
+                "relative flex size-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-white/[0.14] to-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_6px_16px_-4px_rgba(0,0,0,0.72)] ring-1 ring-white/12 transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:size-9",
+                "group-hover/menu-tile:scale-110 group-hover/menu-tile:shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_0_16px_-4px_rgba(52,211,153,0.18),0_8px_20px_-6px_rgba(0,0,0,0.82)]",
+                "group-hover/menu-tile:ring-emerald-400/12",
+                "motion-reduce:group-hover/menu-tile:scale-100",
+              )}
+            >
+              <Icon
+                className="size-4 text-emerald-100/95 drop-shadow-[0_0_5px_rgba(52,211,153,0.22)] transition-[filter,transform] duration-300 group-hover/menu-tile:scale-110 group-hover/menu-tile:drop-shadow-[0_0_8px_rgba(110,231,183,0.32)] motion-reduce:group-hover/menu-tile:scale-100"
+                aria-hidden
+              />
+            </div>
           </div>
           <div className="relative z-[1] flex min-h-5 min-w-0 shrink-0 flex-col items-end justify-self-end gap-1">
             {item.badge?.kind === "count" ? (
               <span
-                className="flex min-h-5 min-w-5 items-center justify-center rounded-full border border-white/15 bg-black/40 px-1 text-[9px] font-bold tabular-nums text-white"
+                className="flex min-h-5 min-w-5 items-center justify-center rounded-full border border-white/20 bg-black/50 px-1 text-[9px] font-bold tabular-nums text-white shadow-[0_0_12px_rgba(255,255,255,0.08)] ring-1 ring-white/10"
                 aria-label={`${item.badge.value} avisos`}
               >
                 {item.badge.value}
@@ -376,10 +413,10 @@ function MenuMiniCard({
             {item.badge?.kind === "pill" ? (
               <span
                 className={cn(
-                  "rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white",
+                  "rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white shadow-lg ring-1",
                   item.badge.label === "HOT"
-                    ? "border border-amber-400/45 bg-amber-600/85"
-                    : "border border-emerald-400/40 bg-emerald-600/35",
+                    ? "border border-amber-400/35 bg-linear-to-b from-amber-600/85 to-amber-800/90 shadow-md shadow-amber-950/20 ring-amber-200/15"
+                    : "border border-emerald-400/30 bg-linear-to-b from-emerald-600/75 to-emerald-900/85 shadow-md shadow-emerald-950/25 ring-emerald-200/12",
                 )}
               >
                 {item.badge.label}
