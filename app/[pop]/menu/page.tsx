@@ -890,19 +890,19 @@ export default function MenuPage() {
 
         {/* Subgrid: tabs (alto contenido) · grid menú (1fr, scroll) · dock (alto contenido) */}
         <div className="relative z-[1] grid min-h-0 min-w-0 w-full max-w-full flex-1 grid-rows-[auto_minmax(0,1fr)_auto]">
-          <div className="relative z-10 shrink-0 p-4">
+          <div className="relative z-10 shrink-0 px-2 pt-4 pb-4 sm:p-4">
             <nav
               className="flex w-full min-w-0 max-w-full justify-center"
               aria-label="Vista del menú: todos los accesos o por grupo"
             >
-              <div className="flex w-full min-w-0 max-w-full flex-wrap items-center justify-center gap-0.5 rounded-2xl border border-border/80 bg-muted/45 px-1.5 py-1 shadow-lg backdrop-blur-2xl sm:w-auto sm:flex-nowrap sm:gap-1 sm:px-2 sm:py-1.5">
+              <div className="inline-flex min-w-0 max-w-full flex-wrap items-center justify-center gap-0.5 rounded-2xl border border-border/80 bg-muted/45 px-1.5 py-1 shadow-lg backdrop-blur-2xl sm:flex-nowrap sm:gap-1 sm:px-2 sm:py-1.5">
                 {menuSlides.map((slide, index) => (
                   <button
                     key={slide.key}
                     type="button"
                     onClick={() => scrollTo(index)}
                     className={cn(
-                      "rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors sm:px-3.5 sm:py-2 sm:text-sm",
+                      "rounded-lg px-2.5 py-2 text-xs font-semibold leading-snug transition-colors sm:px-3.5 sm:py-2 sm:text-sm",
                       selectedIndex === index
                         ? "bg-primary/18 text-primary shadow-sm"
                         : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
