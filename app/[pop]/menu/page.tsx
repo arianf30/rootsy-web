@@ -544,6 +544,8 @@ export default function MenuPage() {
   const [favoritesHydrated, setFavoritesHydrated] = useState(false)
   const [dockEditing, setDockEditing] = useState(false)
   const [favToast, setFavToast] = useState<string | null>(null)
+  /** sm+ (640px): teclado físico típico; en táctil no mostramos ni F2–F6 (design-role: no prometer atajos inexistentes). */
+  const [dockFnShortcutsEnabled, setDockFnShortcutsEnabled] = useState(false)
 
   const menuSlides = useMemo(() => buildMenuSlides(POP_MENU_SECTIONS), [])
 
@@ -614,6 +616,14 @@ export default function MenuPage() {
   }, [settingsOpen])
 
   useEffect(() => {
+    const mq = window.matchMedia("(min-width: 640px)")
+    const apply = () => setDockFnShortcutsEnabled(mq.matches)
+    apply()
+    mq.addEventListener("change", apply)
+    return () => mq.removeEventListener("change", apply)
+  }, [])
+
+  useEffect(() => {
     const typingOutsidePopSearch = (target: EventTarget | null): boolean => {
       if (
         target instanceof HTMLInputElement ||
@@ -637,6 +647,7 @@ export default function MenuPage() {
 
       const slot = dockFavoriteSlotFromFnKeyEvent(e)
       if (slot === undefined) return
+      if (!dockFnShortcutsEnabled) return
       if (dockEditing) return
       if (typingOutsidePopSearch(e.target)) return
 
@@ -661,6 +672,7 @@ export default function MenuPage() {
     return () => window.removeEventListener("keydown", onKeyDown, true)
   }, [
     dockEditing,
+    dockFnShortcutsEnabled,
     favoriteIds,
     notificationsOpen,
     popSlug,
@@ -1100,20 +1112,28 @@ export default function MenuPage() {
                           aria-label={
                             dockEditing
                               ? `${item.name}, modo edición del dock`
-                              : `${item.name} (${fn})`
+                              : dockFnShortcutsEnabled
+                                ? `${item.name} (${fn})`
+                                : item.name
                           }
-                          aria-keyshortcuts={dockEditing ? undefined : fn}
+                          aria-keyshortcuts={
+                            dockEditing || !dockFnShortcutsEnabled
+                              ? undefined
+                              : fn
+                          }
                           title={
                             dockEditing
                               ? `Editar posición: ${item.name}`
-                              : `${item.name} · ${fn}`
+                              : dockFnShortcutsEnabled
+                                ? `${item.name} · ${fn}`
+                                : item.name
                           }
                           onClick={() => {
                             if (dockEditing) return
                             if (href) router.push(href)
                           }}
                           className={cn(
-                            "group relative flex flex-col items-center gap-0.5 transition-all duration-200 hover:scale-110 hover:-translate-y-1 active:scale-95",
+                            "group relative flex flex-col items-center gap-0 sm:gap-0.5 transition-all duration-200 hover:scale-110 hover:-translate-y-1 active:scale-95",
                             dockEditing && "rootsy-dock-edit-wiggle",
                           )}
                         >
@@ -1123,7 +1143,10 @@ export default function MenuPage() {
                               <Icon className="size-6 text-white drop-shadow" />
                             </div>
                           </div>
-                          <kbd className="pointer-events-none font-mono text-[10px] font-semibold tabular-nums text-muted-foreground">
+                          <kbd
+                            className="pointer-events-none hidden font-mono text-[10px] font-semibold tabular-nums text-muted-foreground sm:block"
+                            aria-hidden
+                          >
                             {fn}
                           </kbd>
                           <div className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-[10px] font-medium text-white opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100 sm:block">
@@ -1144,11 +1167,11 @@ export default function MenuPage() {
                     return (
                       <div
                         key={`empty-${i}`}
-                        className="flex flex-col items-center gap-0.5"
+                        className="flex flex-col items-center gap-0 sm:gap-0.5"
                         aria-hidden
                       >
                         <div className="flex size-11 items-center justify-center rounded-xl border border-dashed border-foreground/15 bg-muted/30 sm:size-12" />
-                        <kbd className="font-mono text-[10px] font-semibold tabular-nums text-muted-foreground/70">
+                        <kbd className="hidden font-mono text-[10px] font-semibold tabular-nums text-muted-foreground/70 sm:block">
                           {fn}
                         </kbd>
                       </div>
