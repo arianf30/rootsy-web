@@ -1,14 +1,14 @@
 "use client"
 
 import {
-  createInventoryMovement,
+  createInventoryAdjustment,
   deleteInventoryMovement,
+  getArticleInventoryBalance,
   getPopInventoryPageData,
   type InventoryBalanceRow,
   type InventoryCostLayerRow,
   type InventoryLayerAllocationRow,
   type InventoryMovementRow,
-  type InventoryMovementType,
 } from "@/app/[siteId]/[popId]/inventory/actions"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -68,18 +68,6 @@ const MOVEMENT_LABELS: Record<string, string> = {
   initial: "Saldo inicial",
 }
 
-const CREATE_MOVEMENT_OPTIONS: { value: InventoryMovementType; label: string }[] =
-  [
-    { value: "adjustment", label: "Ajuste de inventario" },
-    { value: "initial", label: "Saldo inicial" },
-    { value: "purchase_receipt", label: "Ingreso por compra" },
-    { value: "sale", label: "Egreso por venta" },
-    { value: "return_customer", label: "Devolución de cliente" },
-    { value: "return_supplier", label: "Devolución a proveedor" },
-    { value: "transfer_in", label: "Transferencia (entrada)" },
-    { value: "transfer_out", label: "Transferencia (salida)" },
-  ]
-
 function formatQty(n: number) {
   const t = Math.round(n * 1e6) / 1e6
   if (Number.isInteger(t)) return String(t)
@@ -126,6 +114,7 @@ function InventoryPage() {
   const popId = typeof params?.popId === "string" ? params.popId : undefined
 
   const [popName, setPopName] = useState("")
+  const [ledgerTimeZone, setLedgerTimeZone] = useState("")
   const [movements, setMovements] = useState<InventoryMovementRow[]>([])
   const [costLayers, setCostLayers] = useState<InventoryCostLayerRow[]>([])
   const [layerAllocations, setLayerAllocations] = useState<
@@ -133,9 +122,11 @@ function InventoryPage() {
   >([])
   const [balances, setBalances] = useState<InventoryBalanceRow[]>([])
   const [articleOptions, setArticleOptions] = useState<
-    { id: string; name: string }[]
+    { id: string; name: string; costPrice: number }[]
   >([])
   const [canCreate, setCanCreate] = useState(false)
+  const [canPostAdjustmentAccounting, setCanPostAdjustmentAccounting] =
+    useState(false)
   const [canDelete, setCanDelete] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -144,10 +135,12 @@ function InventoryPage() {
   const [createSaving, setCreateSaving] = useState(false)
   const [createBanner, setCreateBanner] = useState<string | null>(null)
   const [createArticleId, setCreateArticleId] = useState("")
-  const [createMovementType, setCreateMovementType] =
-    useState<InventoryMovementType>("adjustment")
-  const [createQty, setCreateQty] = useState("")
+  const [createAddStock, setCreateAddStock] = useState(true)
+  const [createQty, setCreateQty] = useState("1")
   const [createNote, setCreateNote] = useState("")
+  const [createStockLoading, setCreateStockLoading] = useState(false)
+  const [createStockError, setCreateStockError] = useState<string | null>(null)
+  const [createOnHand, setCreateOnHand] = useState<number | null>(null)
 
   const [deleteRow, setDeleteRow] = useState<InventoryMovementRow | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
@@ -161,12 +154,14 @@ function InventoryPage() {
     const res = await getPopInventoryPageData(popId)
     if (!res.success) {
       setError(res.error || "Error")
+      setLedgerTimeZone(res.ledgerTimeZone ?? "")
       setMovements([])
       setCostLayers([])
       setLayerAllocations([])
       setBalances([])
       setArticleOptions([])
       setCanCreate(false)
+      setCanPostAdjustmentAccounting(false)
       setCanDelete(false)
       if (res.redirect) {
         setTimeout(() => routerRef.current.push(res.redirect!), 1200)
@@ -174,12 +169,14 @@ function InventoryPage() {
       return
     }
     setPopName(res.popName)
+    setLedgerTimeZone(res.ledgerTimeZone ?? "")
     setMovements(res.movements)
     setCostLayers(res.costLayers)
     setLayerAllocations(res.layerAllocations)
     setBalances(res.balances)
     setArticleOptions(res.articles)
     setCanCreate(res.canCreate)
+    setCanPostAdjustmentAccounting(res.canPostAdjustmentAccounting)
     setCanDelete(res.canDelete)
     setError(null)
   }, [popId, siteId])
@@ -236,23 +233,95 @@ function InventoryPage() {
 
   const openCreate = () => {
     setCreateBanner(null)
-    setCreateArticleId(articleOptions[0]?.id ?? "")
-    setCreateMovementType("adjustment")
-    setCreateQty("")
+    const first = articleOptions[0]
+    setCreateArticleId(first?.id ?? "")
+    setCreateAddStock(true)
+    setCreateQty("1")
     setCreateNote("")
+    setCreateStockError(null)
+    setCreateOnHand(null)
     setCreateOpen(true)
   }
+
+  useEffect(() => {
+    if (!createOpen || !popId || !siteId) {
+      if (!createOpen) {
+        setCreateStockLoading(false)
+        setCreateStockError(null)
+        setCreateOnHand(null)
+      }
+      return
+    }
+    if (!createArticleId) {
+      setCreateStockLoading(false)
+      setCreateStockError(null)
+      setCreateOnHand(null)
+      return
+    }
+    let cancelled = false
+    setCreateStockLoading(true)
+    setCreateStockError(null)
+    setCreateOnHand(null)
+    void (async () => {
+      const res = await getArticleInventoryBalance(popId, {
+        articleId: createArticleId,
+        siteId,
+      })
+      if (cancelled) return
+      setCreateStockLoading(false)
+      if (!res.success) {
+        setCreateStockError(res.error)
+        return
+      }
+      setCreateOnHand(res.onHand)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [createOpen, createArticleId, popId, siteId])
+
+  useEffect(() => {
+    if (
+      !createOpen ||
+      createAddStock ||
+      createOnHand === null ||
+      createStockLoading
+    ) {
+      return
+    }
+    const maxS = Math.min(10000, Math.max(0, Math.floor(createOnHand)))
+    const q = parseInt(createQty, 10)
+    if (Number.isFinite(q) && q > maxS) {
+      setCreateQty(String(maxS))
+    }
+  }, [
+    createOpen,
+    createAddStock,
+    createOnHand,
+    createStockLoading,
+    createQty,
+  ])
 
   const submitCreate = async (e: FormEvent) => {
     e.preventDefault()
     if (!popId || !siteId) return
     setCreateSaving(true)
     setCreateBanner(null)
-    const res = await createInventoryMovement(popId, {
+    const q = parseInt(createQty, 10)
+    if (!Number.isFinite(q) || q < 1 || q > 10000) {
+      setCreateSaving(false)
+      setCreateBanner(
+        q === 0
+          ? "Indicá una cantidad mayor que cero para aplicar el ajuste."
+          : "La cantidad debe ser un número entero entre 1 y 10000.",
+      )
+      return
+    }
+    const res = await createInventoryAdjustment(popId, {
       articleId: createArticleId,
-      quantityDelta: Number(createQty),
-      movementType: createMovementType,
+      quantityDelta: createAddStock ? q : -q,
       note: createNote,
+      siteId,
     })
     setCreateSaving(false)
     if (!res.success) {
@@ -288,6 +357,26 @@ function InventoryPage() {
     `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.email || "u")}`
 
   const popLogoSrc = `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(popId || "pop")}&backgroundColor=e8f5ef`
+
+  const createParsedQty = parseInt(createQty, 10)
+  const createQtyValid =
+    Number.isFinite(createParsedQty) &&
+    createParsedQty >= 1 &&
+    createParsedQty <= 10000
+  const createMaxSubtract =
+    createOnHand === null ? 0 : Math.min(10000, Math.floor(createOnHand))
+  const createModalCanSubmit =
+    createQtyValid &&
+    (createAddStock ||
+      (createOnHand !== null && createParsedQty <= createMaxSubtract))
+  const createStockAfterPreview =
+    createOnHand !== null && !createStockLoading && Number.isFinite(createParsedQty)
+      ? Math.round(
+          (createOnHand +
+            (createAddStock ? createParsedQty : -createParsedQty)) *
+            1e6,
+        ) / 1e6
+      : null
 
   if (!popId || !siteId) {
     return (
@@ -364,10 +453,17 @@ function InventoryPage() {
                   size="sm"
                   className="h-9 gap-1.5 rounded-xl bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
                   onClick={() => openCreate()}
-                  disabled={articleOptions.length === 0}
+                  disabled={
+                    articleOptions.length === 0 || !canPostAdjustmentAccounting
+                  }
+                  title={
+                    !canPostAdjustmentAccounting
+                      ? "Se requieren permisos de inventario y de cuentas (crear y actualizar asientos)."
+                      : undefined
+                  }
                 >
                   <Plus className="size-4" aria-hidden />
-                  <span className="hidden sm:inline">Registrar movimiento</span>
+                  <span>Nuevo ajuste</span>
                 </Button>
               ) : null}
               <button
@@ -410,13 +506,22 @@ function InventoryPage() {
           ) : (
             <>
               <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                El stock se registra con{" "}
-                <strong className="text-foreground">movimientos</strong> (ingresos y egresos). El
-                saldo por artículo es la suma de esos movimientos. Las tablas{" "}
+                En esta pantalla solo se registran{" "}
+                <strong className="text-foreground">ajustes de stock</strong> (sobrantes o faltantes),
+                con un asiento contable en el plan del punto de venta. El saldo por artículo es la
+                suma de los movimientos. Compras, ventas, saldos iniciales y devoluciones se
+                gestionan en otras secciones. Las tablas{" "}
                 <strong className="text-foreground">inventory_cost_layers</strong> e{" "}
-                <strong className="text-foreground">inventory_layer_allocations</strong> guardan
-                capas FIFO y qué capa consume cada salida cuando ese flujo esté conectado.
+                <strong className="text-foreground">inventory_layer_allocations</strong> reflejan
+                capas FIFO cuando apliquen a otros flujos.
               </p>
+              {canCreate && !canPostAdjustmentAccounting ? (
+                <p className="max-w-2xl rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+                  Para cargar ajustes con asiento necesitás permisos de{" "}
+                  <strong className="font-semibold">cuentas</strong> (crear y actualizar asientos)
+                  además de inventario.
+                </p>
+              ) : null}
 
               <section>
                 <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-foreground/70">
@@ -727,7 +832,7 @@ function InventoryPage() {
           className="max-h-[min(90vh,640px)] overflow-y-auto border-border bg-card text-foreground sm:max-w-md"
         >
           <DialogHeader>
-            <DialogTitle>Registrar movimiento</DialogTitle>
+            <DialogTitle>Nuevo ajuste de inventario</DialogTitle>
           </DialogHeader>
           {createBanner ? (
             <p className="rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -750,47 +855,111 @@ function InventoryPage() {
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="inv-type">Tipo</Label>
-              <select
-                id="inv-type"
-                value={createMovementType}
-                onChange={(e) =>
-                  setCreateMovementType(e.target.value as InventoryMovementType)
-                }
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-              >
-                {CREATE_MOVEMENT_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="inv-qty">Cantidad (Δ)</Label>
-              <Input
-                id="inv-qty"
-                type="number"
-                step="any"
-                required
-                value={createQty}
-                onChange={(e) => setCreateQty(e.target.value)}
-                placeholder="Ej. 10 o -2"
-                className="bg-background font-mono"
-              />
-              <p className="text-xs text-muted-foreground">
-                Positivo suma stock, negativo resta (ej. venta con -3).
+              <p className="min-h-5 text-xs text-muted-foreground">
+                {createStockLoading ? (
+                  <span>Consultando stock…</span>
+                ) : createStockError ? (
+                  <span className="text-destructive">{createStockError}</span>
+                ) : createOnHand !== null ? (
+                  <span>Stock actual: {formatQty(createOnHand)}</span>
+                ) : null}
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="inv-note">Nota (opcional)</Label>
+              <Label htmlFor="inv-qty">Cantidad (0 a 10000; el ajuste exige al menos 1)</Label>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <div
+                  className="inline-flex h-10 shrink-0 rounded-lg border border-input bg-muted p-0.5"
+                  role="group"
+                  aria-label="Tipo de ajuste"
+                >
+                  <button
+                    type="button"
+                    className={cn(
+                      "rounded-md px-3 py-0 text-sm font-medium transition-colors",
+                      !createAddStock
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    onClick={() => setCreateAddStock(false)}
+                  >
+                    Restar stock
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      "rounded-md px-3 py-0 text-sm font-medium transition-colors",
+                      createAddStock
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    onClick={() => setCreateAddStock(true)}
+                  >
+                    Sumar stock
+                  </button>
+                </div>
+                <Input
+                  id="inv-qty"
+                  type="number"
+                  min={0}
+                  max={
+                    createAddStock
+                      ? 10000
+                      : Math.min(
+                          10000,
+                          Math.max(0, Math.floor(createOnHand ?? 0)),
+                        )
+                  }
+                  step={1}
+                  inputMode="numeric"
+                  value={createQty}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    if (v === "") {
+                      setCreateQty("")
+                      return
+                    }
+                    const n = parseInt(v, 10)
+                    if (Number.isNaN(n)) return
+                    if (createAddStock) {
+                      setCreateQty(
+                        String(Math.min(10000, Math.max(0, n))),
+                      )
+                      return
+                    }
+                    const cap = Math.min(
+                      10000,
+                      Math.max(0, Math.floor(createOnHand ?? 0)),
+                    )
+                    setCreateQty(String(Math.min(cap, Math.max(0, n))))
+                  }}
+                  className="min-w-0 flex-1 bg-background font-mono sm:max-w-44"
+                />
+              </div>
+              {createOnHand !== null && !createStockLoading ? (
+                <p className="text-xs text-muted-foreground">
+                  Tras el ajuste:{" "}
+                  {createStockAfterPreview === null
+                    ? "—"
+                    : formatQty(createStockAfterPreview)}
+                </p>
+              ) : null}
+              <p className="text-xs text-muted-foreground">
+                El importe del asiento se calcula al confirmar: primero capas FIFO (si existen);
+                si no hay o falta cubrir cantidad, se usa el precio de costo del artículo. La fecha
+                del asiento es la fecha calendario actual en la zona horaria del punto de venta
+                {ledgerTimeZone ? ` (${ledgerTimeZone}).` : "."}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="inv-note">Motivo / detalle</Label>
               <Textarea
                 id="inv-note"
                 rows={2}
+                required
                 value={createNote}
                 onChange={(e) => setCreateNote(e.target.value)}
+                placeholder="Ej. Ajuste por inventario físico abril"
                 className="bg-background"
               />
             </div>
@@ -798,8 +967,16 @@ function InventoryPage() {
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={createSaving}>
-                {createSaving ? "Guardando…" : "Guardar"}
+              <Button
+                type="submit"
+                disabled={
+                  createSaving ||
+                  createStockLoading ||
+                  createStockError != null ||
+                  !createModalCanSubmit
+                }
+              >
+                {createSaving ? "Aplicando…" : "Confirmar ajuste"}
               </Button>
             </DialogFooter>
           </form>

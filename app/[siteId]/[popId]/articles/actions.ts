@@ -1,5 +1,6 @@
 "use server"
 
+import { createInitialStockLedgerForArticle } from "@/app/[siteId]/[popId]/inventory/actions"
 import { ARTICLE_DELETE_CONFIRM_PHRASE } from "@/app/[siteId]/[popId]/articles/articleConstants"
 import {
   POP_PERMS,
@@ -19,6 +20,7 @@ export type ArticleTableRow = {
   name: string
   description: string
   salePrice: number
+  costPrice: number
   iva: number
   categoryId: string
   categoryName: string
@@ -34,12 +36,16 @@ export type UpdatePopArticleInput = {
   name: string
   description: string
   salePrice: number
+  costPrice: number
   iva: number
   categoryId: string
   isActive: boolean
 }
 
-export type CreatePopArticleInput = UpdatePopArticleInput
+export type CreatePopArticleInput = UpdatePopArticleInput & {
+  siteId?: string
+  initialStockQuantity?: number | null
+}
 
 export async function getPopArticleCategories(popId: string): Promise<
   | { success: true; categories: ArticleCategoryOption[] }
@@ -121,12 +127,17 @@ export async function updatePopArticle(
     }
 
     const supabase = await createClient()
+    const costPrice = Number(input.costPrice)
+    if (!Number.isFinite(costPrice) || costPrice < 0) {
+      return { success: false, error: "Precio de costo inválido." }
+    }
     const { error } = await supabase
       .from("articles")
       .update({
         name,
         description: input.description.trim(),
         sale_price: salePrice,
+        cost_price: costPrice,
         iva,
         category_id: categoryId,
         is_active: input.isActive,
@@ -181,19 +192,69 @@ export async function createPopArticle(
     }
 
     const supabase = await createClient()
-    const { error } = await supabase.from("articles").insert({
-      pop_id: popId,
-      name,
-      description: input.description.trim(),
-      sale_price: salePrice,
-      iva,
-      category_id: categoryId,
-      is_active: input.isActive,
-    })
-
-    if (error) {
-      return { success: false, error: error.message || "No se pudo crear." }
+    const costPrice = Number(input.costPrice)
+    if (!Number.isFinite(costPrice) || costPrice < 0) {
+      return { success: false, error: "Precio de costo inválido." }
     }
+    const rawInitial = input.initialStockQuantity
+    const initialQty = rawInitial == null ? 0 : Number(rawInitial)
+    const wantsInitial =
+      Number.isFinite(initialQty) &&
+      Number.isInteger(initialQty) &&
+      initialQty > 0
+    let siteIdForStock = ""
+    if (wantsInitial) {
+      if (initialQty < 1 || initialQty > 10000) {
+        return {
+          success: false,
+          error: "El stock inicial debe ser un entero entre 1 y 10000.",
+        }
+      }
+      if (costPrice <= 0) {
+        return {
+          success: false,
+          error:
+            "Para registrar stock inicial se requiere un precio de costo mayor que cero.",
+        }
+      }
+      siteIdForStock = typeof input.siteId === "string" ? input.siteId.trim() : ""
+      if (!siteIdForStock) {
+        return { success: false, error: "No se pudo validar el sitio del punto de venta." }
+      }
+    }
+
+    const { data: created, error } = await supabase
+      .from("articles")
+      .insert({
+        pop_id: popId,
+        name,
+        description: input.description.trim(),
+        sale_price: salePrice,
+        cost_price: costPrice,
+        iva,
+        category_id: categoryId,
+        is_active: input.isActive,
+      })
+      .select("id")
+      .single()
+
+    if (error || !created?.id) {
+      return { success: false, error: error?.message || "No se pudo crear." }
+    }
+    const articleId = String(created.id)
+
+    if (wantsInitial) {
+      const stockRes = await createInitialStockLedgerForArticle(popId, {
+        articleId,
+        quantity: initialQty,
+        siteId: siteIdForStock,
+      })
+      if (!stockRes.success) {
+        await supabase.from("articles").delete().eq("id", articleId).eq("pop_id", popId)
+        return { success: false, error: stockRes.error }
+      }
+    }
+
     return { success: true }
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Error desconocido"
@@ -361,6 +422,7 @@ export async function getPopArticlesTable(popId: string): Promise<
       articles: ArticleTableRow[]
       popName: string
       canCreate: boolean
+      canPostInitialStock: boolean
       canUpdate: boolean
       canDelete: boolean
     }
@@ -371,6 +433,7 @@ export async function getPopArticlesTable(popId: string): Promise<
       articles: ArticleTableRow[]
       popName?: string
       canCreate: boolean
+      canPostInitialStock: boolean
       canUpdate: boolean
       canDelete: boolean
     }
@@ -378,6 +441,7 @@ export async function getPopArticlesTable(popId: string): Promise<
   const empty = {
     articles: [] as ArticleTableRow[],
     canCreate: false,
+    canPostInitialStock: false,
     canUpdate: false,
     canDelete: false,
   }
@@ -416,6 +480,23 @@ export async function getPopArticlesTable(popId: string): Promise<
       POP_PERMS.ARTICLE_CREATE.resource,
       POP_PERMS.ARTICLE_CREATE.action,
     )
+    const canPostInitialStock =
+      canCreate &&
+      permissionKeysInclude(
+        snap.keys,
+        POP_PERMS.INVENTORY_CREATE.resource,
+        POP_PERMS.INVENTORY_CREATE.action,
+      ) &&
+      permissionKeysInclude(
+        snap.keys,
+        POP_PERMS.ACCOUNTS_CREATE.resource,
+        POP_PERMS.ACCOUNTS_CREATE.action,
+      ) &&
+      permissionKeysInclude(
+        snap.keys,
+        POP_PERMS.ACCOUNTS_UPDATE.resource,
+        POP_PERMS.ACCOUNTS_UPDATE.action,
+      )
     const canUpdate = permissionKeysInclude(
       snap.keys,
       POP_PERMS.ARTICLE_UPDATE.resource,
@@ -440,6 +521,7 @@ export async function getPopArticlesTable(popId: string): Promise<
         name,
         description,
         sale_price,
+        cost_price,
         iva,
         category_id,
         is_active,
@@ -466,6 +548,7 @@ export async function getPopArticlesTable(popId: string): Promise<
         name: String(row.name ?? ""),
         description: String(row.description ?? ""),
         salePrice: Number(row.sale_price ?? 0) || 0,
+        costPrice: Number(row.cost_price ?? 0) || 0,
         iva: Number(row.iva ?? 0) || 0,
         categoryId: String(row.category_id ?? ""),
         categoryName: cat?.name ? String(cat.name) : "—",
@@ -478,6 +561,7 @@ export async function getPopArticlesTable(popId: string): Promise<
       articles,
       popName,
       canCreate,
+      canPostInitialStock,
       canUpdate,
       canDelete,
     }

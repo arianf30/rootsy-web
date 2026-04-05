@@ -86,6 +86,7 @@ function ArticlesPage() {
   const [popName, setPopName] = useState("")
   const [articles, setArticles] = useState<ArticleTableRow[]>([])
   const [canCreate, setCanCreate] = useState(false)
+  const [canPostInitialStock, setCanPostInitialStock] = useState(false)
   const [canUpdate, setCanUpdate] = useState(false)
   const [canDelete, setCanDelete] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -101,6 +102,7 @@ function ArticlesPage() {
     name: "",
     description: "",
     salePrice: "",
+    costPrice: "",
     iva: "",
     categoryId: "",
     isActive: true,
@@ -123,9 +125,11 @@ function ArticlesPage() {
     name: "",
     description: "",
     salePrice: "0",
+    costPrice: "0",
     iva: "21",
     categoryId: "",
     isActive: true,
+    initialStock: "",
   })
 
   const [categoriesOpen, setCategoriesOpen] = useState(false)
@@ -151,6 +155,7 @@ function ArticlesPage() {
     if (!res.success) {
       setError(res.error || "Error al cargar")
       setCanCreate(false)
+      setCanPostInitialStock(false)
       setCanUpdate(false)
       setCanDelete(false)
       if (res.redirect) {
@@ -161,6 +166,7 @@ function ArticlesPage() {
     setArticles(res.articles)
     setPopName(res.popName)
     setCanCreate(res.canCreate)
+    setCanPostInitialStock(res.canPostInitialStock)
     setCanUpdate(res.canUpdate)
     setCanDelete(res.canDelete)
     setError(null)
@@ -224,6 +230,7 @@ function ArticlesPage() {
       name: row.name,
       description: row.description,
       salePrice: String(row.salePrice),
+      costPrice: String(row.costPrice),
       iva: String(row.iva),
       categoryId: row.categoryId,
       isActive: row.isActive,
@@ -265,9 +272,11 @@ function ArticlesPage() {
       name: "",
       description: "",
       salePrice: "0",
+      costPrice: "0",
       iva: "21",
       categoryId: "",
       isActive: true,
+      initialStock: "",
     })
     setCreateCatLoading(true)
     const catRes = await getPopArticleCategories(popId)
@@ -291,13 +300,22 @@ function ArticlesPage() {
     if (!popId || !siteId) return
     setCreateSaving(true)
     setCreateBanner(null)
+    const initialTrim = createForm.initialStock.trim()
+    const initialNum =
+      initialTrim === "" ? null : parseInt(initialTrim, 10)
     const res = await createPopArticle(popId, {
       name: createForm.name,
       description: createForm.description,
       salePrice: Number(createForm.salePrice),
+      costPrice: Number(createForm.costPrice),
       iva: Number(createForm.iva),
       categoryId: createForm.categoryId,
       isActive: createForm.isActive,
+      siteId,
+      initialStockQuantity:
+        initialNum != null && Number.isFinite(initialNum) && initialNum > 0
+          ? initialNum
+          : null,
     })
     setCreateSaving(false)
     if (!res.success) {
@@ -378,6 +396,7 @@ function ArticlesPage() {
       name: editForm.name,
       description: editForm.description,
       salePrice: Number(editForm.salePrice),
+      costPrice: Number(editForm.costPrice),
       iva: Number(editForm.iva),
       categoryId: editForm.categoryId,
       isActive: editForm.isActive,
@@ -417,7 +436,7 @@ function ArticlesPage() {
     await loadArticles()
   }
 
-  const emptyCols = canUpdate || canDelete ? 7 : 6
+  const emptyCols = canUpdate || canDelete ? 8 : 7
 
   const headerUserName = useMemo(() => {
     const meta = user?.user_metadata?.full_name
@@ -615,7 +634,10 @@ function ArticlesPage() {
                         Categoría
                       </TableHead>
                       <TableHead className="text-right font-semibold text-foreground">
-                        Precio
+                        Precio venta
+                      </TableHead>
+                      <TableHead className="text-right font-semibold text-foreground">
+                        Costo
                       </TableHead>
                       <TableHead className="text-right font-semibold text-foreground">
                         IVA %
@@ -658,6 +680,9 @@ function ArticlesPage() {
                           </TableCell>
                           <TableCell className="text-right tabular-nums text-foreground">
                             {formatMoney(a.salePrice)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-muted-foreground">
+                            {formatMoney(a.costPrice)}
                           </TableCell>
                           <TableCell className="text-right tabular-nums text-muted-foreground">
                             {a.iva}
@@ -783,9 +808,9 @@ function ArticlesPage() {
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="art-price">Precio</Label>
+                  <Label htmlFor="art-price">Precio venta</Label>
                   <Input
                     id="art-price"
                     type="number"
@@ -796,6 +821,20 @@ function ArticlesPage() {
                       setEditForm((f) => ({ ...f, salePrice: e.target.value }))
                     }
                     required
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="art-cost">Precio de costo</Label>
+                  <Input
+                    id="art-cost"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={editForm.costPrice}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, costPrice: e.target.value }))
+                    }
                     className="bg-background"
                   />
                 </div>
@@ -962,9 +1001,9 @@ function ArticlesPage() {
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="create-art-price">Precio</Label>
+                  <Label htmlFor="create-art-price">Precio venta</Label>
                   <Input
                     id="create-art-price"
                     type="number"
@@ -978,6 +1017,23 @@ function ArticlesPage() {
                       }))
                     }
                     required
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="create-art-cost">Precio de costo</Label>
+                  <Input
+                    id="create-art-cost"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={createForm.costPrice}
+                    onChange={(e) =>
+                      setCreateForm((f) => ({
+                        ...f,
+                        costPrice: e.target.value,
+                      }))
+                    }
                     className="bg-background"
                   />
                 </div>
@@ -997,6 +1053,34 @@ function ArticlesPage() {
                   />
                 </div>
               </div>
+              {canPostInitialStock ? (
+                <div className="space-y-2">
+                  <Label htmlFor="create-art-initial-stock">
+                    Stock inicial (opcional)
+                  </Label>
+                  <Input
+                    id="create-art-initial-stock"
+                    type="number"
+                    min={0}
+                    max={10000}
+                    step={1}
+                    inputMode="numeric"
+                    placeholder="Vacío = sin movimiento de stock"
+                    value={createForm.initialStock}
+                    onChange={(e) =>
+                      setCreateForm((f) => ({
+                        ...f,
+                        initialStock: e.target.value,
+                      }))
+                    }
+                    className="bg-background"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Si indicás una cantidad, se registra el movimiento tipo saldo inicial y el
+                    asiento contable (Mercaderías / otros ingresos) usando el precio de costo.
+                  </p>
+                </div>
+              ) : null}
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
