@@ -437,6 +437,8 @@ export default function MenuPage() {
   const [showSearch, setShowSearch] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const wallpaperInputRef = useRef<HTMLInputElement>(null)
+  const menuSearchInputDesktopRef = useRef<HTMLInputElement>(null)
+  const menuSearchInputMobileRef = useRef<HTMLInputElement>(null)
   const menuButtonsRowRef = useRef<HTMLDivElement>(null)
   /** clip-path inset(top right bottom left) — fila menú en coords de viewport */
   const [menuRowClipInset, setMenuRowClipInset] = useState(
@@ -490,6 +492,26 @@ export default function MenuPage() {
     [emblaApi],
   )
 
+  /** Tab activa antes de buscar; al haber texto se usa "Todos" (búsqueda global) y al vaciar se restaura. */
+  const preSearchSlideIndexRef = useRef(0)
+  const prevSearchTrimmedRef = useRef("")
+
+  useEffect(() => {
+    const q = searchQuery.trim()
+    const prevTrimmed = prevSearchTrimmedRef.current
+
+    if (q) {
+      if (prevTrimmed === "") {
+        preSearchSlideIndexRef.current = selectedIndex
+      }
+      scrollTo(0)
+    } else if (prevTrimmed !== "") {
+      scrollTo(preSearchSlideIndexRef.current)
+    }
+
+    prevSearchTrimmedRef.current = q
+  }, [searchQuery, scrollTo, selectedIndex])
+
   useEffect(() => {
     setFavoriteIds(loadFavoriteIds())
     const w = loadWallpaperUrl()
@@ -505,6 +527,36 @@ export default function MenuPage() {
   useEffect(() => {
     if (!settingsOpen) setSettingsView("main")
   }, [settingsOpen])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "F1") return
+      if (settingsOpen || notificationsOpen) return
+
+      const target = e.target
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      ) {
+        if (!target.hasAttribute("data-pop-menu-search")) return
+      }
+
+      e.preventDefault()
+      setShowSearch((open) => !open)
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [notificationsOpen, settingsOpen])
+
+  useLayoutEffect(() => {
+    if (!showSearch) return
+    const mq = window.matchMedia("(min-width: 768px)")
+    const el = mq.matches
+      ? menuSearchInputDesktopRef.current
+      : menuSearchInputMobileRef.current
+    queueMicrotask(() => el?.focus())
+  }, [showSearch])
 
   useLayoutEffect(() => {
     const row = menuButtonsRowRef.current
@@ -667,11 +719,12 @@ export default function MenuPage() {
               <div className="relative w-full animate-in zoom-in-95 duration-200">
                 <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-foreground/30" />
                 <input
+                  ref={menuSearchInputDesktopRef}
                   type="search"
+                  data-pop-menu-search
                   placeholder="Buscar sección…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  autoFocus
                   className="h-10 w-full rounded-full border border-border bg-secondary py-0 pl-11 pr-10 text-sm text-foreground transition-all placeholder:text-foreground/30 focus:border-foreground/20 focus:bg-muted focus:outline-none"
                 />
                 <button
@@ -690,13 +743,15 @@ export default function MenuPage() {
                 type="button"
                 onClick={() => setShowSearch(true)}
                 className="group flex h-10 w-full items-center gap-3 rounded-full border border-foreground/[0.06] bg-secondary px-4 transition-all hover:border-foreground/10 hover:bg-muted"
+                aria-keyshortcuts="F1"
+                title="Buscar secciones (F1)"
               >
                 <Search className="size-4 text-foreground/30 group-hover:text-foreground/50" />
                 <span className="flex-1 text-left text-sm text-foreground/30">
                   Buscar sección…
                 </span>
                 <kbd className="rounded-md bg-secondary px-2 py-0.5 font-mono text-[10px] text-foreground/25">
-                  ⌘K
+                  F1
                 </kbd>
               </button>
             )}
@@ -758,11 +813,12 @@ export default function MenuPage() {
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/30" />
               <input
+                ref={menuSearchInputMobileRef}
                 type="search"
+                data-pop-menu-search
                 placeholder="Buscar sección…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
                 className="h-10 w-full rounded-full border border-border bg-secondary py-0 pl-10 pr-10 text-sm focus:outline-none"
               />
               <button
@@ -781,6 +837,8 @@ export default function MenuPage() {
               type="button"
               onClick={() => setShowSearch(true)}
               className="flex h-10 w-full items-center gap-2 rounded-full border border-foreground/10 bg-secondary px-3 text-sm text-foreground/40"
+              aria-keyshortcuts="F1"
+              title="Buscar secciones (F1)"
             >
               <Search className="size-4" />
               Buscar sección…
