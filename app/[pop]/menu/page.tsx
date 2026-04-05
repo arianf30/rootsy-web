@@ -64,6 +64,26 @@ import { cn } from "@/lib/utils"
 
 const MENU_PAGE_SIZE = 12 /** 4×3 (desktop) — más ítems = scroll dentro del contenedor */
 
+/** F1 = búsqueda; ranuras del dock = F2…F(1 + MAX_MENU_FAVORITES). */
+const DOCK_FAVORITE_FN_FIRST = 2
+
+function dockFavoriteKeyLabel(slotIndex: number): string {
+  return `F${DOCK_FAVORITE_FN_FIRST + slotIndex}`
+}
+
+/** `e.key` o `e.code` según navegador/OS. Ranura 0..4 o undefined. */
+function dockFavoriteSlotFromFnKeyEvent(e: KeyboardEvent): number | undefined {
+  for (const raw of [e.key, e.code]) {
+    const m = /^F([2-6])$/i.exec(String(raw))
+    if (m) {
+      const n = Number(m[1])
+      const slot = n - DOCK_FAVORITE_FN_FIRST
+      if (slot >= 0 && slot < MAX_MENU_FAVORITES) return slot
+    }
+  }
+  return undefined
+}
+
 type MenuSlide = {
   key: string
   title: string
@@ -594,25 +614,59 @@ export default function MenuPage() {
   }, [settingsOpen])
 
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "F1") return
-      if (settingsOpen || notificationsOpen) return
-
-      const target = e.target
+    const typingOutsidePopSearch = (target: EventTarget | null): boolean => {
       if (
         target instanceof HTMLInputElement ||
         target instanceof HTMLTextAreaElement ||
         target instanceof HTMLSelectElement
       ) {
-        if (!target.hasAttribute("data-pop-menu-search")) return
+        return !target.hasAttribute("data-pop-menu-search")
+      }
+      return false
+    }
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (settingsOpen || notificationsOpen) return
+
+      if (e.key === "F1") {
+        if (typingOutsidePopSearch(e.target)) return
+        e.preventDefault()
+        setShowSearch((open) => !open)
+        return
+      }
+
+      const slot = dockFavoriteSlotFromFnKeyEvent(e)
+      if (slot === undefined) return
+      if (dockEditing) return
+      if (typingOutsidePopSearch(e.target)) return
+
+      const id = favoriteIds[slot]
+      if (!id) return
+      const item = getMenuItemById(id)
+      if (!item) return
+      const href = resolveMenuHref(item, popSlug)
+      if (!href) {
+        e.preventDefault()
+        setFavToast(
+          "Ese favorito aún no tiene pantalla. Abrilo desde la grilla o cambiá favoritos.",
+        )
+        window.setTimeout(() => setFavToast(null), 4200)
+        return
       }
 
       e.preventDefault()
-      setShowSearch((open) => !open)
+      router.push(href)
     }
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [notificationsOpen, settingsOpen])
+    window.addEventListener("keydown", onKeyDown, true)
+    return () => window.removeEventListener("keydown", onKeyDown, true)
+  }, [
+    dockEditing,
+    favoriteIds,
+    notificationsOpen,
+    popSlug,
+    router,
+    settingsOpen,
+  ])
 
   useLayoutEffect(() => {
     if (!showSearch) return
@@ -687,6 +741,7 @@ export default function MenuPage() {
   return (
     <div
       ref={containerRef}
+      data-rootsy-pop-menu-build="2026-04-05-dock-fkeys"
       className="fixed inset-0 max-w-[100dvw] overflow-x-clip overflow-y-hidden bg-black"
     >
       <input
@@ -1022,11 +1077,12 @@ export default function MenuPage() {
                 </Button>
                 <div className="mx-1 h-6 w-px bg-border/80" />
                 <div className="flex items-center gap-2 sm:gap-3">
-                  {favoriteIds.slice(0, MAX_MENU_FAVORITES).map((id) => {
+                  {favoriteIds.slice(0, MAX_MENU_FAVORITES).map((id, slotIndex) => {
                     const item = getMenuItemById(id)
                     if (!item) return null
                     const Icon = item.icon
                     const href = resolveMenuHref(item, popSlug)
+                    const fn = dockFavoriteKeyLabel(slotIndex)
                     return (
                       <div key={id} className="relative">
                         {dockEditing ? (
@@ -1041,19 +1097,35 @@ export default function MenuPage() {
                         ) : null}
                         <button
                           type="button"
+                          aria-label={
+                            dockEditing
+                              ? `${item.name}, modo edición del dock`
+                              : `${item.name} (${fn})`
+                          }
+                          aria-keyshortcuts={dockEditing ? undefined : fn}
+                          title={
+                            dockEditing
+                              ? `Editar posición: ${item.name}`
+                              : `${item.name} · ${fn}`
+                          }
                           onClick={() => {
                             if (dockEditing) return
                             if (href) router.push(href)
                           }}
                           className={cn(
-                            "group relative flex flex-col items-center gap-1 transition-all duration-200 hover:scale-110 hover:-translate-y-1 active:scale-95",
+                            "group relative flex flex-col items-center gap-0.5 transition-all duration-200 hover:scale-110 hover:-translate-y-1 active:scale-95",
                             dockEditing && "rootsy-dock-edit-wiggle",
                           )}
                         >
-                          <div className="relative flex size-11 items-center justify-center overflow-hidden rounded-xl bg-linear-to-br from-emerald-500/85 to-teal-600/90 shadow-md ring-1 ring-white/15 sm:size-12">
+                          <div className="relative size-11 shrink-0 overflow-hidden rounded-xl bg-linear-to-br from-emerald-500/85 to-teal-600/90 shadow-md ring-1 ring-white/15 sm:size-12">
                             <div className="absolute inset-0 bg-linear-to-tr from-transparent via-white/25 to-transparent opacity-0 transition-all duration-500 group-hover:opacity-100" />
-                            <Icon className="relative size-6 text-white drop-shadow" />
+                            <div className="relative z-[1] flex size-full items-center justify-center">
+                              <Icon className="size-6 text-white drop-shadow" />
+                            </div>
                           </div>
+                          <kbd className="pointer-events-none font-mono text-[10px] font-semibold tabular-nums text-muted-foreground">
+                            {fn}
+                          </kbd>
                           <div className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-[10px] font-medium text-white opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100 sm:block">
                             {item.name}
                           </div>
@@ -1066,13 +1138,22 @@ export default function MenuPage() {
                       0,
                       MAX_MENU_FAVORITES - favoriteIds.length,
                     ),
-                  }).map((_, i) => (
-                    <div
-                      key={`empty-${i}`}
-                      className="flex size-11 items-center justify-center rounded-xl border border-dashed border-foreground/15 bg-muted/30 sm:size-12"
-                      aria-hidden
-                    />
-                  ))}
+                  }).map((_, i) => {
+                    const slotIndex = favoriteIds.length + i
+                    const fn = dockFavoriteKeyLabel(slotIndex)
+                    return (
+                      <div
+                        key={`empty-${i}`}
+                        className="flex flex-col items-center gap-0.5"
+                        aria-hidden
+                      >
+                        <div className="flex size-11 items-center justify-center rounded-xl border border-dashed border-foreground/15 bg-muted/30 sm:size-12" />
+                        <kbd className="font-mono text-[10px] font-semibold tabular-nums text-muted-foreground/70">
+                          {fn}
+                        </kbd>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             </div>
