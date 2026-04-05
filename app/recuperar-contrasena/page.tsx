@@ -30,7 +30,7 @@ export default function RecoverPasswordPage() {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.05),transparent_45%)]" />
           </div>
 
-          <div className="relative w-full max-w-lg rounded-4xl border border-white/12 bg-white/[0.035] p-7 shadow-[0_30px_90px_-42px_rgba(10,18,14,0.7),inset_0_1px_0_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-9">
+          <div className="relative w-full max-w-lg rounded-4xl border border-white/12 bg-white/[0.035] p-7 text-zinc-50 shadow-[0_30px_90px_-42px_rgba(10,18,14,0.7),inset_0_1px_0_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-9">
             <Link
               href="/"
               className="absolute -top-6 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/16 bg-[#0b1110]/90 px-4 py-2 text-sm font-semibold tracking-wide text-white shadow-[0_14px_30px_-18px_rgba(0,0,0,0.8)] ring-1 ring-emerald-400/25 transition-all hover:scale-[1.02] hover:border-emerald-300/45 hover:ring-emerald-300/35"
@@ -43,23 +43,25 @@ export default function RecoverPasswordPage() {
             <div className="pointer-events-none absolute -top-10 left-1/2 h-20 w-2/3 -translate-x-1/2 rounded-full bg-emerald-400/18 blur-2xl" />
 
             <div className="space-y-2">
-              <h1 className="text-3xl font-extrabold tracking-tight sm:text-[2.1rem]">
+              <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-[2.1rem]">
                 Recuperar contraseña
               </h1>
-              <p className="max-w-md text-sm leading-relaxed text-muted-foreground sm:text-base">
-                Ingresa tu correo electronico y te enviaremos un email para que
+              <p className="max-w-md text-sm leading-relaxed text-zinc-200 sm:text-base">
+                Ingresá tu correo electrónico y te enviaremos un enlace para que
                 puedas restablecer tu contraseña.
               </p>
             </div>
 
             <form className="mt-8 space-y-5" noValidate>
               <div className="space-y-2">
-                <Label htmlFor="correo">Correo electronico</Label>
+                <Label htmlFor="correo" className="text-zinc-100">
+                  Correo electrónico
+                </Label>
                 <Input
                   id="correo"
                   type="email"
-                  placeholder="Correo electronico"
-                  className="h-12 border-white/14 bg-white/8 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.9)] focus-visible:ring-emerald-400/40"
+                  placeholder="Correo electrónico"
+                  className="h-12 border-white/14 bg-white/8 text-zinc-50 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.9)] placeholder:text-zinc-400 focus-visible:ring-emerald-400/40"
                 />
               </div>
 
@@ -72,9 +74,9 @@ export default function RecoverPasswordPage() {
 
               <Link
                 href="/login"
-                className="mx-auto block w-fit text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="mx-auto block w-fit text-center text-sm font-medium text-zinc-200 underline-offset-4 transition-colors hover:text-white hover:underline"
               >
-                Volver al inicio
+                Volver a iniciar sesión
               </Link>
             </form>
           </div>
