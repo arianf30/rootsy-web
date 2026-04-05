@@ -28,6 +28,11 @@ import {
 } from "@/components/ui/table"
 import { useAuth } from "@/context/AuthContextSupabase"
 import withAuth from "@/hoc/withAuth"
+import {
+  breadcrumbForAccountRow,
+  breadcrumbForCodePrefix,
+  codePrefixForLeafGroup,
+} from "@/lib/accountingPlanGroupLabels"
 import { popMenuHref } from "@/lib/popRoutes"
 import { cn } from "@/lib/utils"
 import {
@@ -80,6 +85,112 @@ function formatAccountType(t: AccountType): string {
   return ACCOUNT_TYPES.find((o) => o.value === t)?.label ?? t
 }
 
+function compareAccountsByCode(a: ChartAccountRow, b: ChartAccountRow): number {
+  return a.code.localeCompare(b.code, undefined, { numeric: true })
+}
+
+type AccountSection = {
+  key: string
+  title: string
+  subtitle?: string
+  rows: ChartAccountRow[]
+}
+
+function buildAccountSections(accounts: ChartAccountRow[]): AccountSection[] {
+  if (accounts.length === 0) return []
+  const idByRow = new Map(accounts.map((a) => [a.id, a]))
+  const childrenByParent = new Map<string, ChartAccountRow[]>()
+  for (const a of accounts) {
+    if (a.parentId) {
+      const list = childrenByParent.get(a.parentId) ?? []
+      list.push(a)
+      childrenByParent.set(a.parentId, list)
+    }
+  }
+  for (const list of childrenByParent.values()) {
+    list.sort(compareAccountsByCode)
+  }
+  const sections: AccountSection[] = []
+  const parentIdsOrdered = [...childrenByParent.keys()].sort((a, b) => {
+    const pa = idByRow.get(a)
+    const pb = idByRow.get(b)
+    if (!pa && !pb) return 0
+    if (!pa) return 1
+    if (!pb) return -1
+    return compareAccountsByCode(pa, pb)
+  })
+  for (const pid of parentIdsOrdered) {
+    const parent = idByRow.get(pid)
+    const children = childrenByParent.get(pid) ?? []
+    sections.push({
+      key: `db-parent-${pid}`,
+      title: parent
+        ? breadcrumbForCodePrefix(parent.code)
+        : "Padre no encontrado en el plan",
+      subtitle: parent
+        ? undefined
+        : "Hay subcuentas que referencian un padre que no está en este listado.",
+      rows: children,
+    })
+  }
+  const rootsWithDbChildren = new Set(childrenByParent.keys())
+  const rootsWithoutDbChildren = accounts.filter(
+    (a) => a.parentId == null && !rootsWithDbChildren.has(a.id),
+  )
+  const prefixGroups = new Map<string, ChartAccountRow[]>()
+  const singletonRoots: ChartAccountRow[] = []
+  for (const a of rootsWithoutDbChildren) {
+    const pfx = codePrefixForLeafGroup(a.code)
+    if (pfx) {
+      const list = prefixGroups.get(pfx) ?? []
+      list.push(a)
+      prefixGroups.set(pfx, list)
+    } else {
+      singletonRoots.push(a)
+    }
+  }
+  for (const list of prefixGroups.values()) {
+    list.sort(compareAccountsByCode)
+  }
+  const prefixKeys = [...prefixGroups.keys()].sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true }),
+  )
+  for (const pfx of prefixKeys) {
+    const rows = prefixGroups.get(pfx) ?? []
+    sections.push({
+      key: `prefix-${pfx}`,
+      title: breadcrumbForCodePrefix(pfx),
+      subtitle: rows[0]
+        ? formatAccountType(rows[0].accountType)
+        : undefined,
+      rows,
+    })
+  }
+  singletonRoots.sort(compareAccountsByCode)
+  for (const a of singletonRoots) {
+    sections.push({
+      key: `single-${a.id}`,
+      title: breadcrumbForAccountRow(a),
+      subtitle: formatAccountType(a.accountType),
+      rows: [a],
+    })
+  }
+  const orphanRows = accounts.filter(
+    (r) => r.parentId != null && !idByRow.has(r.parentId),
+  )
+  orphanRows.sort(compareAccountsByCode)
+  if (orphanRows.length > 0) {
+    sections.push({
+      key: "orphan-parent-ref",
+      title: "Subcuentas con padre ausente",
+      subtitle:
+        "El parent_id no coincide con ninguna cuenta cargada para este punto de venta.",
+      rows: orphanRows,
+    })
+  }
+  return sections
+}
+
 function AccountingPage() {
   const router = useRouter()
   const routerRef = useRef(router)
@@ -109,6 +220,11 @@ function AccountingPage() {
 
   const [isOnline, setIsOnline] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
+
+  const accountSections = useMemo(
+    () => buildAccountSections(accounts),
+    [accounts],
+  )
 
   const load = useCallback(async () => {
     if (!popId || !siteId) return
@@ -342,26 +458,15 @@ function AccountingPage() {
                     Chart of accounts
                   </h2>
                   <p className="max-w-2xl text-sm text-muted-foreground">
-                    Existing accounts are read-only. You can add new movement
-                    accounts for this store.
+                    Las cuentas existentes son solo lectura. El encabezado de
+                    cada caja es la jerarquía en texto (Activo &gt; Activo
+                    corriente &gt; …); los códigos completos están en la tabla.
                   </p>
                 </div>
-                <div className="overflow-hidden rounded-2xl border border-border bg-card/95 shadow-md shadow-primary/5 backdrop-blur-sm">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-border bg-muted/40 hover:bg-muted/40">
-                        <TableHead className="font-semibold">Code</TableHead>
-                        <TableHead className="font-semibold">Name</TableHead>
-                        <TableHead className="font-semibold">Type</TableHead>
-                        <TableHead className="font-semibold">Nature</TableHead>
-                        <TableHead className="text-right font-semibold">
-                          Level
-                        </TableHead>
-                        <TableHead className="font-semibold">Movement</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {accounts.length === 0 ? (
+                {accounts.length === 0 ? (
+                  <div className="overflow-hidden rounded-2xl border border-border bg-card/95 shadow-md shadow-primary/5 backdrop-blur-sm">
+                    <Table>
+                      <TableBody>
                         <TableRow>
                           <TableCell
                             colSpan={6}
@@ -370,34 +475,81 @@ function AccountingPage() {
                             No accounts yet.
                           </TableCell>
                         </TableRow>
-                      ) : (
-                        accounts.map((r) => (
-                          <TableRow
-                            key={r.id}
-                            className="border-border/80 hover:bg-muted/30"
-                          >
-                            <TableCell className="font-mono text-sm tabular-nums">
-                              {r.code}
-                            </TableCell>
-                            <TableCell className="font-medium">{r.name}</TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {formatAccountType(r.accountType)}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm capitalize">
-                              {r.nature}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums text-muted-foreground">
-                              {r.level}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {r.isMovementAccount ? "Yes" : "No"}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {accountSections.map((section) => (
+                      <div
+                        key={section.key}
+                        className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-md shadow-primary/10"
+                      >
+                        <div className="border-b border-border bg-muted/45 px-4 py-3 sm:px-5">
+                          <h3 className="text-sm font-medium leading-relaxed text-foreground sm:text-[0.95rem]">
+                            {section.title}
+                          </h3>
+                          {section.subtitle ? (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {section.subtitle}
+                            </p>
+                          ) : null}
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-border bg-muted/25 hover:bg-muted/25">
+                              <TableHead className="font-semibold">
+                                Código
+                              </TableHead>
+                              <TableHead className="font-semibold">
+                                Nombre
+                              </TableHead>
+                              <TableHead className="font-semibold">
+                                Tipo
+                              </TableHead>
+                              <TableHead className="font-semibold">
+                                Naturaleza
+                              </TableHead>
+                              <TableHead className="text-right font-semibold">
+                                Nivel
+                              </TableHead>
+                              <TableHead className="font-semibold">
+                                Movimiento
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {section.rows.map((r) => (
+                              <TableRow
+                                key={r.id}
+                                className="border-border/80 hover:bg-muted/30"
+                              >
+                                <TableCell className="font-mono text-sm tabular-nums">
+                                  {r.code}
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                  {r.name}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {formatAccountType(r.accountType)}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm capitalize">
+                                  {r.nature}
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums text-muted-foreground">
+                                  {r.level}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {r.isMovementAccount ? "Sí" : "No"}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
 
               <section className="space-y-4">

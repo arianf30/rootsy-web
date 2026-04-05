@@ -5,6 +5,8 @@ import {
   deleteInventoryMovement,
   getPopInventoryPageData,
   type InventoryBalanceRow,
+  type InventoryCostLayerRow,
+  type InventoryLayerAllocationRow,
   type InventoryMovementRow,
   type InventoryMovementType,
 } from "@/app/[siteId]/[popId]/inventory/actions"
@@ -34,7 +36,9 @@ import { popMenuHref } from "@/lib/popRoutes"
 import { cn } from "@/lib/utils"
 import {
   ArrowLeft,
+  Boxes,
   ClipboardList,
+  Layers,
   Maximize2,
   Minimize2,
   Plus,
@@ -97,6 +101,21 @@ function shortUserId(id: string | null) {
   return id.length > 14 ? `${id.slice(0, 8)}…${id.slice(-4)}` : id
 }
 
+function shortUuid(id: string) {
+  if (!id) return "—"
+  return id.length > 12 ? `${id.slice(0, 8)}…` : id
+}
+
+function formatMoneyAr(n: number) {
+  const t = Math.round(n * 1e4) / 1e4
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  }).format(t)
+}
+
 function InventoryPage() {
   const router = useRouter()
   const routerRef = useRef(router)
@@ -108,6 +127,10 @@ function InventoryPage() {
 
   const [popName, setPopName] = useState("")
   const [movements, setMovements] = useState<InventoryMovementRow[]>([])
+  const [costLayers, setCostLayers] = useState<InventoryCostLayerRow[]>([])
+  const [layerAllocations, setLayerAllocations] = useState<
+    InventoryLayerAllocationRow[]
+  >([])
   const [balances, setBalances] = useState<InventoryBalanceRow[]>([])
   const [articleOptions, setArticleOptions] = useState<
     { id: string; name: string }[]
@@ -139,6 +162,8 @@ function InventoryPage() {
     if (!res.success) {
       setError(res.error || "Error")
       setMovements([])
+      setCostLayers([])
+      setLayerAllocations([])
       setBalances([])
       setArticleOptions([])
       setCanCreate(false)
@@ -150,6 +175,8 @@ function InventoryPage() {
     }
     setPopName(res.popName)
     setMovements(res.movements)
+    setCostLayers(res.costLayers)
+    setLayerAllocations(res.layerAllocations)
     setBalances(res.balances)
     setArticleOptions(res.articles)
     setCanCreate(res.canCreate)
@@ -383,10 +410,170 @@ function InventoryPage() {
           ) : (
             <>
               <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                El stock se registra con <strong className="text-foreground">movimientos</strong>{" "}
-                (ingresos y egresos). El saldo por artículo es la suma de esos movimientos. Las
-                ventas automáticas se integrarán cuando el flujo de ventas escriba en esta tabla.
+                El stock se registra con{" "}
+                <strong className="text-foreground">movimientos</strong> (ingresos y egresos). El
+                saldo por artículo es la suma de esos movimientos. Las tablas{" "}
+                <strong className="text-foreground">inventory_cost_layers</strong> e{" "}
+                <strong className="text-foreground">inventory_layer_allocations</strong> guardan
+                capas FIFO y qué capa consume cada salida cuando ese flujo esté conectado.
               </p>
+
+              <section>
+                <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-foreground/70">
+                  <Layers className="size-4 text-primary" aria-hidden />
+                  Capas de costo (FIFO)
+                </h2>
+                <p className="mb-3 max-w-2xl text-xs text-muted-foreground">
+                  Cada ingreso con costo puede crear una capa: cantidad recibida, restante para
+                  consumir y costo unitario. Orden de venta: primero la capa más antigua (
+                  <span className="font-mono">received_at</span>).
+                </p>
+                <div className="overflow-x-auto rounded-xl border border-border bg-card/80 shadow-sm">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border hover:bg-transparent">
+                        <TableHead>Artículo</TableHead>
+                        <TableHead className="text-right tabular-nums">Recibido</TableHead>
+                        <TableHead className="text-right tabular-nums">Restante</TableHead>
+                        <TableHead className="text-right">Costo unit.</TableHead>
+                        <TableHead>Ingreso</TableHead>
+                        <TableHead>Mov. origen</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {costLayers.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            className="py-10 text-center text-muted-foreground"
+                          >
+                            Sin capas todavía. Se crearán al registrar compras/ingresos con costo
+                            vinculado a movimientos de stock.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        costLayers.map((row) => (
+                          <TableRow
+                            key={row.id}
+                            className="border-border/80 hover:bg-muted/30"
+                          >
+                            <TableCell className="font-medium text-foreground">
+                              {row.articleName}
+                            </TableCell>
+                            <TableCell className="text-right font-mono tabular-nums">
+                              {formatQty(row.quantityReceived)}
+                            </TableCell>
+                            <TableCell
+                              className={cn(
+                                "text-right font-mono tabular-nums",
+                                row.quantityRemaining <= 0
+                                  ? "text-muted-foreground"
+                                  : "text-foreground",
+                              )}
+                            >
+                              {formatQty(row.quantityRemaining)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm tabular-nums">
+                              {formatMoneyAr(row.unitCost)}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap text-muted-foreground text-sm">
+                              {formatDateTime(row.receivedAt)}
+                            </TableCell>
+                            <TableCell
+                              className="font-mono text-xs text-muted-foreground"
+                              title={row.sourceMovementId ?? undefined}
+                            >
+                              {row.sourceMovementId
+                                ? shortUuid(row.sourceMovementId)
+                                : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </section>
+
+              <section>
+                <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-foreground/70">
+                  <Boxes className="size-4 text-primary" aria-hidden />
+                  Imputaciones FIFO (salidas)
+                </h2>
+                <p className="mb-3 max-w-2xl text-xs text-muted-foreground">
+                  Cada fila es una porción tomada de una capa al registrar una salida (p. ej.
+                  venta). Un mismo movimiento puede tener varias filas si mezcla capas.
+                </p>
+                <div className="overflow-x-auto rounded-xl border border-border bg-card/80 shadow-sm">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border hover:bg-transparent">
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Artículo</TableHead>
+                        <TableHead className="text-right">Cant.</TableHead>
+                        <TableHead className="text-right">Costo unit.</TableHead>
+                        <TableHead className="text-right">Subtotal</TableHead>
+                        <TableHead>Capa</TableHead>
+                        <TableHead>Mov. stock</TableHead>
+                        <TableHead>Tipo mov.</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {layerAllocations.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={8}
+                            className="py-10 text-center text-muted-foreground"
+                          >
+                            Sin imputaciones. Aparecerán cuando las ventas/egresos generen consumo
+                            FIFO contra capas.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        layerAllocations.map((row) => (
+                          <TableRow
+                            key={row.id}
+                            className="border-border/80 hover:bg-muted/30"
+                          >
+                            <TableCell className="whitespace-nowrap text-muted-foreground text-sm">
+                              {formatDateTime(row.createdAt)}
+                            </TableCell>
+                            <TableCell className="font-medium text-foreground">
+                              {row.articleName}
+                            </TableCell>
+                            <TableCell className="text-right font-mono tabular-nums">
+                              {formatQty(row.quantity)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm tabular-nums">
+                              {formatMoneyAr(row.unitCost)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm tabular-nums">
+                              {formatMoneyAr(row.lineCost)}
+                            </TableCell>
+                            <TableCell
+                              className="font-mono text-xs text-muted-foreground"
+                              title={row.layerId}
+                            >
+                              {shortUuid(row.layerId)}
+                            </TableCell>
+                            <TableCell
+                              className="font-mono text-xs text-muted-foreground"
+                              title={row.inventoryMovementId}
+                            >
+                              {shortUuid(row.inventoryMovementId)}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {row.movementType
+                                ? MOVEMENT_LABELS[row.movementType] ?? row.movementType
+                                : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </section>
 
               <section>
                 <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-foreground/70">

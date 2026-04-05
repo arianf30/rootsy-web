@@ -27,6 +27,7 @@ export type AccountNature = "deudora" | "acreedora"
 
 export type ChartAccountRow = {
   id: string
+  parentId: string | null
   code: string
   name: string
   accountType: AccountType
@@ -86,7 +87,7 @@ export async function getAccountingPageData(popId: string): Promise<
     const { data: accRows, error: accErr } = await supabase
       .from("accounting_chart_of_accounts")
       .select(
-        "id, code, name, account_type, nature, level, is_movement_account",
+        "id, parent_id, code, name, account_type, nature, level, is_movement_account",
       )
       .eq("pop_id", popId)
       .order("code", { ascending: true })
@@ -107,8 +108,11 @@ export async function getAccountingPageData(popId: string): Promise<
     const accounts: ChartAccountRow[] = (accRows || []).map((r) => {
       const at = String(r.account_type ?? "")
       const nt = String(r.nature ?? "")
+      const pid = r.parent_id
       return {
         id: String(r.id),
+        parentId:
+          pid != null && String(pid).length > 0 ? String(pid) : null,
         code: String(r.code ?? ""),
         name: String(r.name ?? ""),
         accountType: accountTypes.includes(at as AccountType)

@@ -56,6 +56,30 @@ export type InventoryBalanceRow = {
   onHand: number
 }
 
+export type InventoryCostLayerRow = {
+  id: string
+  articleId: string
+  articleName: string
+  sourceMovementId: string | null
+  quantityReceived: number
+  quantityRemaining: number
+  unitCost: number
+  receivedAt: string
+}
+
+export type InventoryLayerAllocationRow = {
+  id: string
+  layerId: string
+  articleId: string
+  articleName: string
+  inventoryMovementId: string
+  movementType: string
+  quantity: number
+  unitCost: number
+  lineCost: number
+  createdAt: string
+}
+
 function parseQty(v: unknown): number {
   const n = Number(v)
   if (!Number.isFinite(n)) return 0
@@ -160,6 +184,8 @@ export async function getPopInventoryPageData(popId: string): Promise<
       popName: string
       movements: InventoryMovementRow[]
       balances: InventoryBalanceRow[]
+      costLayers: InventoryCostLayerRow[]
+      layerAllocations: InventoryLayerAllocationRow[]
       articles: InventoryArticleOption[]
       canCreate: boolean
       canUpdate: boolean
@@ -172,6 +198,8 @@ export async function getPopInventoryPageData(popId: string): Promise<
       popName?: string
       movements: InventoryMovementRow[]
       balances: InventoryBalanceRow[]
+      costLayers: InventoryCostLayerRow[]
+      layerAllocations: InventoryLayerAllocationRow[]
       articles: InventoryArticleOption[]
       canCreate: boolean
       canUpdate: boolean
@@ -181,6 +209,8 @@ export async function getPopInventoryPageData(popId: string): Promise<
   const empty = {
     movements: [] as InventoryMovementRow[],
     balances: [] as InventoryBalanceRow[],
+    costLayers: [] as InventoryCostLayerRow[],
+    layerAllocations: [] as InventoryLayerAllocationRow[],
     articles: [] as InventoryArticleOption[],
     canCreate: false,
     canUpdate: false,
@@ -318,11 +348,107 @@ export async function getPopInventoryPageData(popId: string): Promise<
     }))
     balances.sort((a, b) => a.articleName.localeCompare(b.articleName, "es"))
 
+    const { data: layerRows, error: layerErr } = await supabase
+      .from("inventory_cost_layers")
+      .select(
+        `
+        id,
+        article_id,
+        source_movement_id,
+        quantity_received,
+        quantity_remaining,
+        unit_cost,
+        received_at,
+        articles ( name )
+      `,
+      )
+      .eq("pop_id", popId)
+      .order("received_at", { ascending: true })
+    if (layerErr) {
+      return {
+        success: false,
+        error: layerErr.message || "No se pudieron cargar capas de costo.",
+        ...empty,
+        popName,
+      }
+    }
+    const costLayers: InventoryCostLayerRow[] = (layerRows || []).map((r) => {
+      const art = r.articles as unknown as { name?: string } | null
+      const aid = String(r.article_id)
+      return {
+        id: String(r.id),
+        articleId: aid,
+        articleName: art?.name
+          ? String(art.name)
+          : nameByArticle.get(aid) || aid,
+        sourceMovementId:
+          r.source_movement_id != null ? String(r.source_movement_id) : null,
+        quantityReceived: parseQty(r.quantity_received),
+        quantityRemaining: parseQty(r.quantity_remaining),
+        unitCost: parseQty(r.unit_cost),
+        receivedAt: String(r.received_at ?? ""),
+      }
+    })
+
+    const { data: allocRows, error: allocErr } = await supabase
+      .from("inventory_layer_allocations")
+      .select(
+        `
+        id,
+        layer_id,
+        article_id,
+        inventory_movement_id,
+        quantity,
+        unit_cost,
+        created_at,
+        articles ( name ),
+        inventory_movements ( movement_type )
+      `,
+      )
+      .eq("pop_id", popId)
+      .order("created_at", { ascending: false })
+      .limit(150)
+    if (allocErr) {
+      return {
+        success: false,
+        error: allocErr.message || "No se pudieron cargar imputaciones FIFO.",
+        ...empty,
+        popName,
+      }
+    }
+    const layerAllocations: InventoryLayerAllocationRow[] = (
+      allocRows || []
+    ).map((r) => {
+      const art = r.articles as unknown as { name?: string } | null
+      const mov = r.inventory_movements as unknown as {
+        movement_type?: string
+      } | null
+      const aid = String(r.article_id)
+      const q = parseQty(r.quantity)
+      const uc = parseQty(r.unit_cost)
+      return {
+        id: String(r.id),
+        layerId: String(r.layer_id),
+        articleId: aid,
+        articleName: art?.name
+          ? String(art.name)
+          : nameByArticle.get(aid) || aid,
+        inventoryMovementId: String(r.inventory_movement_id),
+        movementType: String(mov?.movement_type ?? ""),
+        quantity: q,
+        unitCost: uc,
+        lineCost: Math.round(q * uc * 1e6) / 1e6,
+        createdAt: String(r.created_at ?? ""),
+      }
+    })
+
     return {
       success: true,
       popName,
       movements,
       balances,
+      costLayers,
+      layerAllocations,
       articles,
       canCreate,
       canUpdate,
