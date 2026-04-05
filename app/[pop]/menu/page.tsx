@@ -381,7 +381,7 @@ function MenuMiniCard({
 
           <div className="relative z-[1] mt-auto min-h-0 w-full border-t border-white/[0.05] pt-2">
             <p
-              className="text-pretty text-left text-[9px] font-semibold leading-[1.35] tracking-tight text-white/92 sm:text-[10px] sm:leading-snug"
+              className="text-pretty text-left text-xs font-semibold leading-snug tracking-tight text-white/92 sm:text-sm sm:leading-snug"
               lang="es"
             >
               {item.name}
@@ -725,7 +725,7 @@ export default function MenuPage() {
                   placeholder="Buscar sección…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-10 w-full rounded-full border border-border bg-secondary py-0 pl-11 pr-10 text-sm text-foreground transition-all placeholder:text-foreground/30 focus:border-foreground/20 focus:bg-muted focus:outline-none"
+                  className="h-10 w-full rounded-full border border-border bg-secondary py-0 pl-11 pr-10 text-sm text-foreground transition-all placeholder:text-foreground/30 focus:border-foreground/20 focus:bg-muted focus:outline-none [&::-webkit-search-cancel-button]:hidden [&::-ms-clear]:hidden"
                 />
                 <button
                   type="button"
@@ -819,7 +819,7 @@ export default function MenuPage() {
                 placeholder="Buscar sección…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 w-full rounded-full border border-border bg-secondary py-0 pl-10 pr-10 text-sm focus:outline-none"
+                className="h-10 w-full rounded-full border border-border bg-secondary py-0 pl-10 pr-10 text-sm focus:outline-none [&::-webkit-search-cancel-button]:hidden [&::-ms-clear]:hidden"
               />
               <button
                 type="button"
