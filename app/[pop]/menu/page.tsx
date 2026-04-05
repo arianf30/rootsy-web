@@ -15,6 +15,7 @@ import useEmblaCarousel from "embla-carousel-react"
 import {
   ArrowLeft,
   Bell,
+  Check,
   CreditCard,
   HelpCircle,
   Home,
@@ -1009,8 +1010,23 @@ export default function MenuPage() {
                   )}
                   onClick={() => setDockEditing((e) => !e)}
                 >
-                  <Pencil className="size-3.5" />
-                  {dockEditing ? "Listo" : "Editar"}
+                  <span className="sr-only sm:hidden">
+                    {dockEditing ? "Listo" : "Editar favoritos del dock"}
+                  </span>
+                  {dockEditing ? (
+                    <>
+                      <Check className="size-3.5 sm:hidden" aria-hidden />
+                      <Pencil
+                        className="hidden size-3.5 sm:block"
+                        aria-hidden
+                      />
+                    </>
+                  ) : (
+                    <Pencil className="size-3.5" aria-hidden />
+                  )}
+                  <span className="hidden sm:inline">
+                    {dockEditing ? "Listo" : "Editar"}
+                  </span>
                 </Button>
                 <div className="mx-1 h-6 w-px bg-border/80" />
                 <div className="flex items-center gap-2 sm:gap-3">
