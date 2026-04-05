@@ -86,36 +86,19 @@ function buildMenuSlides(sections: MenuSectionDef[]): MenuSlide[] {
 const MENU_GRID_MAX_W =
   "w-full max-w-none sm:mx-auto sm:max-w-[min(100%,36rem)]"
 
-/** Degradé superior: todo en 10px (igual que pt del grid) para que la 1ª hilera quede en máscara transparente. */
-const MENU_ROW_OVERLAY_TOP_FADE_PX = 10
-const MENU_ROW_OVERLAY_BOTTOM_EDGE_PX = 30
-const MENU_ROW_OVERLAY_BOTTOM_FADE_PX = 56
+/** Máscara overlay fila menú: franja superior (px); inferior más ancha para fundir con el dock. */
+const MENU_ROW_OVERLAY_TOP_FADE_PX = 12
+const MENU_ROW_OVERLAY_BOTTOM_FADE_PX = 32
 
-/** Máscara en coords de viewport: solo la franja de la fila; arriba #000→transparente en TOP_FADE_PX; abajo banda + fundido. */
-function menuRowOverlayMaskStyle(viewportTop: number, viewportBottom: number): Pick<
-  CSSProperties,
-  | "maskImage"
-  | "WebkitMaskImage"
-  | "maskSize"
-  | "WebkitMaskSize"
-  | "maskRepeat"
-  | "WebkitMaskRepeat"
-> {
-  const topFade = MENU_ROW_OVERLAY_TOP_FADE_PX
-  const bandBottom = MENU_ROW_OVERLAY_BOTTOM_EDGE_PX
-  const fadeBottom = MENU_ROW_OVERLAY_BOTTOM_FADE_PX
-  const top = Math.max(0, viewportTop)
-  const bottom = Math.max(top, viewportBottom)
-  const h = bottom - top
-  const yTopFadeEnd = top + topFade
-  const yFadeBottomStart = bottom - bandBottom - fadeBottom
-  const ySolidBottomStart = bottom - bandBottom
-  const minHeightForFullMask = topFade + bandBottom + fadeBottom * 2
-
-  const grad =
-    h >= minHeightForFullMask && yTopFadeEnd <= yFadeBottomStart
-      ? `linear-gradient(to bottom, transparent 0px, transparent ${top}px, #000 ${top}px, transparent ${yTopFadeEnd}px, transparent ${yFadeBottomStart}px, #000 ${ySolidBottomStart}px, #000 ${bottom}px, transparent ${bottom}px, transparent 100%)`
-      : `linear-gradient(to bottom, transparent 0px, transparent ${top}px, #000 ${top}px, transparent ${yTopFadeEnd}px, transparent ${(top + bottom) / 2}px, #000 ${bottom}px, transparent ${bottom}px, transparent 100%)`
+/**
+ * Máscara del bloque foto+velo encima del grid: #000 = capa visible, transparent = “agujero”.
+ * Centro transparente; borde superior e inferior con anchos propios (abajo más suave hacia el dock).
+ */
+function menuRowOverlayMaskStyleLocal(): CSSProperties {
+  const top = MENU_ROW_OVERLAY_TOP_FADE_PX
+  const bottom = MENU_ROW_OVERLAY_BOTTOM_FADE_PX
+  /** Alpha: opaco en máscara = mostrar capa; transparente = no pintar (centro “hueco”). */
+  const grad = `linear-gradient(to bottom, #000 0px, transparent ${top}px, transparent calc(100% - ${bottom}px), #000 100%)`
 
   return {
     maskImage: grad,
@@ -124,6 +107,7 @@ function menuRowOverlayMaskStyle(viewportTop: number, viewportBottom: number): P
     WebkitMaskSize: "100% 100%",
     maskRepeat: "no-repeat",
     WebkitMaskRepeat: "no-repeat",
+    maskMode: "alpha",
   }
 }
 
@@ -248,14 +232,14 @@ function MenuGridScrollArea({
       <div
         onScroll={flashScrollbar}
         className={cn(
-          "rootsy-menu-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-clip overscroll-y-contain pr-1 scroll-smooth",
+          "rootsy-menu-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-clip overscroll-y-contain scroll-smooth",
           barVisible && "rootsy-menu-scroll--active",
         )}
         role="region"
         aria-label={`${slideTitle}: desplazá para ver más accesos`}
       >
-        {/* pt 10px alineado a la banda superior de la máscara del overlay; pb aire bajo última fila */}
-        <div className="pb-8 pt-2.5 sm:pb-10 sm:pt-2.5">
+        {/* px-2: aire lateral cuando el scrollbar corre el contenido (p. ej. tab Todos) */}
+        <div className="px-2 pb-8 pt-2.5 sm:pb-10 sm:pt-2.5">
           {children}
         </div>
       </div>
@@ -345,11 +329,12 @@ function MenuMiniCard({
             "group/menu-tile relative z-0 grid h-full min-h-0 w-full grid-cols-2 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-2xl border border-white/[0.1] bg-gradient-to-b from-[rgb(20_25_22_/0.72)] via-[rgb(17_22_20_/0.66)] to-[rgb(14_18_16_/0.6)] p-2.5 text-left backdrop-blur-[2px] sm:p-3",
             "shadow-[0_12px_32px_-14px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.06),inset_0_-1px_0_0_rgba(0,0,0,0.26)]",
             "transition-[transform,box-shadow,background-color,border-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-            "hover:-translate-y-0.5 hover:scale-[1.042] hover:border-white/16 hover:from-[rgb(22_28_24_/0.78)] hover:via-[rgb(18_24_21_/0.72)] hover:to-[rgb(15_20_17_/0.66)]",
+            "hover:border-white/16 hover:from-[rgb(22_28_24_/0.78)] hover:via-[rgb(18_24_21_/0.72)] hover:to-[rgb(15_20_17_/0.66)]",
             "hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_24px_-10px_rgba(52,211,153,0.09),0_22px_44px_-16px_rgba(0,0,0,0.72)]",
+            "sm:hover:-translate-y-0.5 sm:hover:scale-[1.042]",
             "active:scale-[0.98] active:translate-y-0",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070a09]",
-            "motion-reduce:transition-colors motion-reduce:hover:scale-100 motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-[0_12px_32px_-14px_rgba(0,0,0,0.75)]",
+            "motion-reduce:transition-colors motion-reduce:sm:hover:scale-100 motion-reduce:sm:hover:translate-y-0 motion-reduce:hover:shadow-[0_12px_32px_-14px_rgba(0,0,0,0.75)]",
           )}
         >
           {/* Luz ambiental + viñeta tipo “gaming card” */}
@@ -393,13 +378,13 @@ function MenuMiniCard({
             <div
               className={cn(
                 "relative flex size-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-white/[0.14] to-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_6px_16px_-4px_rgba(0,0,0,0.72)] ring-1 ring-white/12 transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:size-9",
-                "group-hover/menu-tile:scale-110 group-hover/menu-tile:shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_0_16px_-4px_rgba(52,211,153,0.18),0_8px_20px_-6px_rgba(0,0,0,0.82)]",
-                "group-hover/menu-tile:ring-emerald-400/12",
-                "motion-reduce:group-hover/menu-tile:scale-100",
+                "sm:group-hover/menu-tile:scale-110 sm:group-hover/menu-tile:shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_0_16px_-4px_rgba(52,211,153,0.18),0_8px_20px_-6px_rgba(0,0,0,0.82)]",
+                "sm:group-hover/menu-tile:ring-emerald-400/12",
+                "motion-reduce:sm:group-hover/menu-tile:scale-100",
               )}
             >
               <Icon
-                className="size-4 text-emerald-100/95 drop-shadow-[0_0_5px_rgba(52,211,153,0.22)] transition-[filter,transform] duration-300 group-hover/menu-tile:scale-110 group-hover/menu-tile:drop-shadow-[0_0_8px_rgba(110,231,183,0.32)] motion-reduce:group-hover/menu-tile:scale-100"
+                className="size-4 text-emerald-100/95 drop-shadow-[0_0_5px_rgba(52,211,153,0.22)] transition-[filter,transform] duration-300 sm:group-hover/menu-tile:scale-110 sm:group-hover/menu-tile:drop-shadow-[0_0_8px_rgba(110,231,183,0.32)] motion-reduce:sm:group-hover/menu-tile:scale-100"
                 aria-hidden
               />
             </div>
@@ -524,15 +509,6 @@ export default function MenuPage() {
   const menuSearchInputDesktopRef = useRef<HTMLInputElement>(null)
   const menuSearchInputMobileRef = useRef<HTMLInputElement>(null)
   const menuButtonsRowRef = useRef<HTMLDivElement>(null)
-  /** clip-path inset(top right bottom left) — fila menú en coords de viewport */
-  const [menuRowClipInset, setMenuRowClipInset] = useState(
-    "inset(100% 100% 100% 100%)",
-  )
-  /** Bordes superior/inferior de la fila (px viewport) para máscara radial al bloque real. */
-  const [menuRowViewportSpan, setMenuRowViewportSpan] = useState<{
-    top: number
-    bottom: number
-  } | null>(null)
 
   const [wallpaperSrc, setWallpaperSrc] = useState(DEFAULT_MENU_WALLPAPER)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -550,7 +526,9 @@ export default function MenuPage() {
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: false,
-    align: "center",
+    /** "start": cada slide ocupa 100% del viewport; "center" en móvil suele desplazar/peek y recorta bordes. */
+    align: "start",
+    containScroll: "trimSnaps",
     skipSnaps: false,
     dragFree: false,
   })
@@ -642,40 +620,6 @@ export default function MenuPage() {
     queueMicrotask(() => el?.focus())
   }, [showSearch])
 
-  useLayoutEffect(() => {
-    const row = menuButtonsRowRef.current
-    if (!row) return
-
-    const syncClip = () => {
-      const r = row.getBoundingClientRect()
-      const vw = window.innerWidth
-      const vh = window.innerHeight
-      const top = Math.round(Math.max(0, r.top))
-      const right = Math.round(Math.max(0, vw - r.right))
-      const bottom = Math.round(Math.max(0, vh - r.bottom))
-      const left = Math.round(Math.max(0, r.left))
-      setMenuRowClipInset(`inset(${top}px ${right}px ${bottom}px ${left}px)`)
-      setMenuRowViewportSpan({
-        top: Math.round(r.top),
-        bottom: Math.round(r.bottom),
-      })
-    }
-
-    syncClip()
-    const ro = new ResizeObserver(syncClip)
-    ro.observe(row)
-    window.addEventListener("resize", syncClip)
-    window.visualViewport?.addEventListener("resize", syncClip)
-    window.visualViewport?.addEventListener("scroll", syncClip)
-    requestAnimationFrame(() => syncClip())
-    return () => {
-      ro.disconnect()
-      window.removeEventListener("resize", syncClip)
-      window.visualViewport?.removeEventListener("resize", syncClip)
-      window.visualViewport?.removeEventListener("scroll", syncClip)
-    }
-  }, [])
-
   const getSlideItems = useCallback(
     (slideIndex: number) => {
       const slide = menuSlides[slideIndex]
@@ -740,7 +684,7 @@ export default function MenuPage() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 overflow-hidden bg-black"
+      className="fixed inset-0 max-w-[100dvw] overflow-x-clip overflow-y-hidden bg-black"
     >
       <input
         ref={wallpaperInputRef}
@@ -756,7 +700,7 @@ export default function MenuPage() {
       </div>
 
       {/* Grid: fila 1 = header · fila 2 = resto del viewport (panel + subgrid) */}
-      <div className="relative z-10 grid h-full max-h-dvh min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)]">
+      <div className="relative z-10 grid h-full max-h-dvh min-h-0 w-full min-w-0 max-w-[100dvw] grid-rows-[auto_minmax(0,1fr)]">
       <header
         className="relative z-20 shrink-0 border-b border-rootsy-hairline backdrop-blur-2xl backdrop-saturate-110"
         style={{
@@ -933,7 +877,7 @@ export default function MenuPage() {
         </div>
       </header>
 
-      <div className="rootsy-pop-menu-panel relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+      <div className="rootsy-pop-menu-panel relative flex h-full min-h-0 w-full min-w-0 max-w-[100dvw] flex-col overflow-x-clip overflow-y-hidden">
         {/* Solo wallpaper en el panel */}
         <div
           className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -943,13 +887,13 @@ export default function MenuPage() {
         </div>
 
         {/* Subgrid: tabs (alto contenido) · grid menú (1fr, scroll) · dock (alto contenido) */}
-        <div className="relative z-[1] grid min-h-0 min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto]">
-          <div className="shrink-0 p-4">
+        <div className="relative z-[1] grid min-h-0 min-w-0 w-full max-w-full flex-1 grid-rows-[auto_minmax(0,1fr)_auto]">
+          <div className="relative z-10 shrink-0 p-4">
             <nav
-              className="flex justify-center"
+              className="flex w-full min-w-0 max-w-full justify-center"
               aria-label="Vista del menú: todos los accesos o por grupo"
             >
-              <div className="flex max-w-full flex-wrap items-center justify-center gap-0.5 rounded-2xl border border-border/80 bg-muted/45 px-1.5 py-1 shadow-lg backdrop-blur-2xl sm:flex-nowrap sm:gap-1 sm:px-2 sm:py-1.5">
+              <div className="flex w-full min-w-0 max-w-full flex-wrap items-center justify-center gap-0.5 rounded-2xl border border-border/80 bg-muted/45 px-1.5 py-1 shadow-lg backdrop-blur-2xl sm:w-auto sm:flex-nowrap sm:gap-1 sm:px-2 sm:py-1.5">
                 {menuSlides.map((slide, index) => (
                   <button
                     key={slide.key}
@@ -980,47 +924,38 @@ export default function MenuPage() {
 
           <div
             ref={menuButtonsRowRef}
-            className="relative isolate min-h-0 min-w-0 overflow-hidden"
+            className="relative min-h-0 min-w-0 max-w-full overflow-hidden"
           >
-            {/* 1) Fondo (overlay global recortado + máscara) */}
-            {menuRowViewportSpan != null ? (
-              <div
-                className="pointer-events-none fixed inset-0 z-[25] overflow-hidden"
-                style={{
-                  clipPath: menuRowClipInset,
-                  ...menuRowOverlayMaskStyle(
-                    menuRowViewportSpan.top,
-                    menuRowViewportSpan.bottom,
-                  ),
-                }}
-                aria-hidden
-              >
-                <PopMenuRowOverlayBackground wallpaperSrc={wallpaperSrc} />
-              </div>
-            ) : null}
-            {/* 2) Botones (carrusel + grilla) */}
             <div
-              className="relative z-[1] h-full min-h-0 w-full min-w-0 touch-pan-y"
+              className="pointer-events-none absolute inset-0 z-[15] overflow-hidden"
+              style={menuRowOverlayMaskStyleLocal()}
+              aria-hidden
+            >
+              <PopMenuRowOverlayBackground wallpaperSrc={wallpaperSrc} />
+            </div>
+            {/* Grid por debajo del overlay (mismos toques; overlay solo visual) */}
+            <div
+              className="relative z-10 h-full min-h-0 w-full min-w-0 max-w-full overflow-x-clip"
               ref={emblaRef}
             >
-              <div className="flex h-full min-h-0 min-w-full">
+              <div className="flex h-full min-h-0 w-full min-w-0 max-w-full">
                 {menuSlides.map((slide, slideIndex) => {
                   const items = getSlideItems(slideIndex)
                   const needsScroll = items.length > MENU_PAGE_SIZE
                   return (
                     <div
                       key={slide.key}
-                      className="flex h-full min-h-0 min-w-0 flex-[0_0_100%] flex-col px-4 sm:px-10 md:px-11"
+                      className="box-border flex h-full min-h-0 min-w-0 max-w-full flex-[0_0_100%] flex-shrink-0 flex-col overflow-x-clip px-4 sm:px-10 md:px-11"
                     >
                       <MenuGridScrollArea
                         needsScroll={needsScroll}
                         slideTitle={slide.title}
                       >
                         {/* Aire en sm+ para estrella, +12px tiles y resplandor hover sin tocar el borde */}
-                        <div className="min-w-0 sm:px-1 md:px-1.5">
+                        <div className="min-w-0 max-w-full sm:px-1 md:px-1.5">
                           <div
                             className={cn(
-                              "mx-auto grid w-full grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-6",
+                              "mx-auto grid w-full min-w-0 max-w-full grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-6",
                             )}
                           >
                             {items.map((item) => (
@@ -1069,7 +1004,7 @@ export default function MenuPage() {
               className="pointer-events-none absolute inset-0 -z-10"
               aria-hidden
             />
-            <div className="pointer-events-none flex flex-col items-center px-3 pb-4 pt-2.5 sm:pb-5">
+            <div className="pointer-events-none flex flex-col items-center px-3 pb-4 pt-3 sm:pb-5">
               <div className="pointer-events-auto flex items-center gap-2 rounded-2xl border border-border/80 bg-muted/95 px-2 py-2 shadow-lg backdrop-blur-2xl sm:px-4 sm:py-2.5">
                 <Button
                   type="button"
