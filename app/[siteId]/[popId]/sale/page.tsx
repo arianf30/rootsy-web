@@ -60,6 +60,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 
@@ -324,6 +334,17 @@ function SalePage() {
     void loadCatalog()
   }, [loadCatalog])
 
+  useEffect(() => {
+    if (!canReadPaymentMethods || salePaymentMethods.length === 0) return
+    setMetodoPagoSeleccionado((prev) => {
+      if (prev && salePaymentMethods.some((m) => m.id === prev.id)) {
+        return prev
+      }
+      const efectivo = salePaymentMethods.find((m) => m.kind === "cash")
+      return efectivo ? { id: efectivo.id, label: efectivo.name } : null
+    })
+  }, [canReadPaymentMethods, salePaymentMethods])
+
   const productosCatalogo = useMemo(
     () => catalogArticles.map(articleToProducto),
     [catalogArticles],
@@ -355,6 +376,7 @@ function SalePage() {
   const [valorDescuentoPorcentaje, setValorDescuentoPorcentaje] = useState(0)
   const [valorDescuentoFijo, setValorDescuentoFijo] = useState(0)
   const [descuentoModalAbierto, setDescuentoModalAbierto] = useState(false)
+  const [descartarConfirmOpen, setDescartarConfirmOpen] = useState(false)
   const [descuentoDraftModo, setDescuentoDraftModo] = useState<
     "porcentaje" | "fijo"
   >("porcentaje")
@@ -481,6 +503,48 @@ function SalePage() {
   const total = subtotal - descuentoMonto
 
   const hayDescuento = descuentoMonto > 0
+
+  const hayItemsEnPedido = itemsDetallados.length > 0
+
+  const hayContenidoVenta = useMemo(() => {
+    if (carrito.length > 0) return true
+    if (clienteSeleccionado != null) return true
+    if (comprobante != null) return true
+    if (hayDescuento) return true
+    if (descuentoItemsMonto > 0) return true
+    if (Object.values(itemComentarios).some((c) => c?.trim())) return true
+    return false
+  }, [
+    carrito.length,
+    clienteSeleccionado,
+    comprobante,
+    hayDescuento,
+    descuentoItemsMonto,
+    itemComentarios,
+  ])
+
+  const puedeRegistrarVenta = useMemo(
+    () => hayItemsEnPedido && metodoPagoSeleccionado != null,
+    [hayItemsEnPedido, metodoPagoSeleccionado?.id],
+  )
+
+  const limpiarVenta = useCallback(() => {
+    setCarrito([])
+    setClienteSeleccionado(null)
+    setComprobante(null)
+    setModoDescuento("porcentaje")
+    setValorDescuentoPorcentaje(0)
+    setValorDescuentoFijo(0)
+    setItemDetalleAbiertoId(null)
+    setItemComentarios({})
+    setItemDescuentoModo({})
+    setItemDescuentoDraft({})
+    setMetodoPagoSeleccionado(() => {
+      const efectivo = salePaymentMethods.find((m) => m.kind === "cash")
+      return efectivo ? { id: efectivo.id, label: efectivo.name } : null
+    })
+    setDescartarConfirmOpen(false)
+  }, [salePaymentMethods])
 
   useEffect(() => {
     if (modoDescuento !== "fijo") return
@@ -691,8 +755,18 @@ function SalePage() {
 
   const ventaDialogSurface =
     "gap-0 overflow-hidden rounded-2xl border border-border/60 bg-card p-0 shadow-2xl ring-1 ring-black/[0.04] dark:ring-white/[0.06]"
-  const ventaDialogSurfaceMd = cn(ventaDialogSurface, "sm:max-w-md")
-  const ventaDialogSurfaceLg = cn(ventaDialogSurface, "sm:max-w-lg")
+  const ventaDialogMaxViewport =
+    "max-h-[calc(100vh-100px)] flex flex-col overflow-hidden"
+  const ventaDialogSurfaceMd = cn(
+    ventaDialogSurface,
+    ventaDialogMaxViewport,
+    "sm:max-w-md",
+  )
+  const ventaDialogSurfaceLg = cn(
+    ventaDialogSurface,
+    ventaDialogMaxViewport,
+    "sm:max-w-2xl",
+  )
   const ventaDialogHeader =
     "space-y-1.5 border-b border-border/50 bg-muted/25 px-6 pb-4 pt-5 text-left"
   const ventaDialogBody = "px-6 py-4"
@@ -1555,14 +1629,24 @@ function SalePage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-11 gap-2 border-rose-200/90 bg-white font-medium text-rose-700 shadow-none hover:border-rose-300 hover:bg-rose-50 hover:text-rose-800 focus-visible:ring-2 focus-visible:ring-rose-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f8fafc]"
+                    disabled={!hayContenidoVenta}
+                    onClick={() => setDescartarConfirmOpen(true)}
+                    className="h-11 gap-2 border-rose-200/90 bg-white font-medium text-rose-700 shadow-none hover:border-rose-300 hover:bg-rose-50 hover:text-rose-800 focus-visible:ring-2 focus-visible:ring-rose-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f8fafc] disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     <CircleX className="size-4 shrink-0" aria-hidden />
                     Descartar
                   </Button>
                   <Button
                     type="button"
-                    className="h-11 gap-2 border-0 bg-emerald-600 font-semibold text-white shadow-[0_1px_2px_rgba(0,0,0,0.06)] hover:bg-emerald-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f8fafc] active:bg-emerald-700"
+                    disabled={!puedeRegistrarVenta}
+                    title={
+                      !hayItemsEnPedido
+                        ? "Agregá productos al pedido."
+                        : !metodoPagoSeleccionado
+                          ? "Elegí un medio de pago para continuar."
+                          : undefined
+                    }
+                    className="h-11 gap-2 border-0 bg-emerald-600 font-semibold text-white shadow-[0_1px_2px_rgba(0,0,0,0.06)] hover:bg-emerald-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f8fafc] active:bg-emerald-700 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     <CircleCheck className="size-4 shrink-0 opacity-95" aria-hidden />
                     Vender
@@ -1743,7 +1827,7 @@ function SalePage() {
         onOpenChange={setComprobanteModalAbierto}
       >
         <DialogContent className={cn(ventaDialogSurfaceMd, "text-foreground")}>
-          <DialogHeader className={ventaDialogHeader}>
+          <DialogHeader className={cn(ventaDialogHeader, "shrink-0")}>
             <DialogTitle className="text-base font-semibold tracking-tight">
               Tipo de comprobante
             </DialogTitle>
@@ -1751,9 +1835,14 @@ function SalePage() {
               Seleccioná el comprobante que vas a emitir en esta venta.
             </DialogDescription>
           </DialogHeader>
-          <div className={ventaDialogBody}>
+          <div
+            className={cn(
+              ventaDialogBody,
+              "min-h-0 flex-1 overflow-y-auto overscroll-contain",
+            )}
+          >
             <ul
-              className="grid gap-2"
+              className="grid grid-cols-1 gap-2 sm:grid-cols-2"
               role="listbox"
               aria-label="Tipos de comprobante"
             >
@@ -1761,37 +1850,39 @@ function SalePage() {
                 const label = opt.label
                 const seleccionado = comprobante === label
                 return (
-                  <li key={label}>
+                  <li key={label} className="min-w-0">
                     <button
                       type="button"
                       role="option"
                       aria-selected={seleccionado}
                       onClick={() => setComprobante(label)}
                       className={cn(
-                        "min-h-11 w-full text-left",
+                        "flex min-h-18 w-full flex-col items-stretch justify-center text-left",
                         modalOpcionBase,
                         seleccionado
                           ? modalOpcionSeleccionada
                           : modalOpcionIdle,
                       )}
                     >
-                      <span className="block text-sm font-semibold">{label}</span>
-                      <span className="mt-0.5 block font-mono text-[11px] text-muted-foreground">
+                      <span className="block text-sm font-semibold leading-snug">
+                        {label}
+                      </span>
+                      <span className="mt-1 block font-mono text-[11px] leading-snug text-muted-foreground">
                         ARCA · CbteTipo {opt.arcaCbteTipo}
                         {opt.arcaRegimen === "fce_mipyme" ? " · FCE MiPyME" : ""}
                       </span>
+                      {opt.note ? (
+                        <span className="mt-2 block border-t border-border/40 pt-2 text-xs leading-snug text-muted-foreground">
+                          {opt.note}
+                        </span>
+                      ) : null}
                     </button>
-                    {opt.note ? (
-                      <p className="mt-1.5 px-1 text-xs leading-snug text-muted-foreground">
-                        {opt.note}
-                      </p>
-                    ) : null}
                   </li>
                 )
               })}
             </ul>
           </div>
-          <DialogFooter className={ventaDialogFooter}>
+          <DialogFooter className={cn(ventaDialogFooter, "shrink-0")}>
             <Button
               type="button"
               variant="ghost"
@@ -1816,7 +1907,7 @@ function SalePage() {
 
       <Dialog open={pagoModalAbierto} onOpenChange={setPagoModalAbierto}>
         <DialogContent className={cn(ventaDialogSurfaceLg, "text-foreground")}>
-          <DialogHeader className={ventaDialogHeader}>
+          <DialogHeader className={cn(ventaDialogHeader, "shrink-0")}>
             <DialogTitle className="text-base font-semibold tracking-tight">
               Método de pago
             </DialogTitle>
@@ -1825,7 +1916,12 @@ function SalePage() {
               tarjetas, transferencia u otros).
             </DialogDescription>
           </DialogHeader>
-          <div className={cn(ventaDialogBody, "max-h-[min(70vh,28rem)] space-y-4 overflow-y-auto")}>
+          <div
+            className={cn(
+              ventaDialogBody,
+              "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain",
+            )}
+          >
             {paymentMethodGroups.length === 0 ? (
               <p className="rounded-lg border border-dashed border-border/60 bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
                 No hay medios de pago activos configurados para este punto de
@@ -1840,14 +1936,7 @@ function SalePage() {
                   <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                     {g.title}
                   </p>
-                  <div
-                    className={cn(
-                      "gap-2",
-                      g.kind === "cash"
-                        ? "flex flex-col"
-                        : "grid grid-cols-2 sm:grid-cols-3",
-                    )}
-                  >
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {g.items.map((m) => {
                       const seleccionado = metodoPagoSeleccionado?.id === m.id
                       return (
@@ -1855,9 +1944,8 @@ function SalePage() {
                           key={m.id}
                           type="button"
                           className={cn(
-                            "min-h-11 min-w-0 px-3 py-2.5 text-center text-sm font-medium",
+                            "flex min-h-12 min-w-0 items-center justify-center px-2 py-2 text-center text-sm font-medium leading-snug",
                             modalOpcionBase,
-                            g.kind === "cash" && "w-full text-left text-base",
                             seleccionado
                               ? modalOpcionSeleccionada
                               : modalOpcionIdle,
@@ -1870,14 +1958,7 @@ function SalePage() {
                             setPagoModalAbierto(false)
                           }}
                         >
-                          <span
-                            className={cn(
-                              "block w-full",
-                              g.kind === "cash" ? "truncate" : "truncate",
-                            )}
-                          >
-                            {m.name}
-                          </span>
+                          <span className="line-clamp-3 w-full">{m.name}</span>
                         </button>
                       )
                     })}
@@ -1886,21 +1967,10 @@ function SalePage() {
               ))
             )}
           </div>
-          <DialogFooter className={ventaDialogFooter}>
+          <DialogFooter className={cn(ventaDialogFooter, "shrink-0")}>
             <Button
               type="button"
-              variant="ghost"
-              className={ventaDialogGhostBtn}
-              onClick={() => {
-                setMetodoPagoSeleccionado(null)
-                setPagoModalAbierto(false)
-              }}
-            >
-              Quitar selección
-            </Button>
-            <Button
-              type="button"
-              className={ventaDialogPrimaryBtn}
+              className={cn(ventaDialogPrimaryBtn, "w-full sm:w-auto")}
               onClick={() => setPagoModalAbierto(false)}
             >
               Listo
@@ -2011,6 +2081,28 @@ function SalePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={descartarConfirmOpen} onOpenChange={setDescartarConfirmOpen}>
+        <AlertDialogContent className="border-border bg-card text-foreground sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Descartar la venta?</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              Se quitarán los productos del pedido, el cliente, el tipo de comprobante, los
+              descuentos y los comentarios de línea. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              type="button"
+              onClick={limpiarVenta}
+              className="border-0 bg-rose-600 text-white hover:bg-rose-500 focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
+            >
+              Descartar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
