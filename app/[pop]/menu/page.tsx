@@ -941,19 +941,19 @@ export default function MenuPage() {
 
         {/* Subgrid: tabs (alto contenido) · grid menú (1fr, scroll) · dock (alto contenido) */}
         <div className="relative z-[1] grid min-h-0 min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto]">
-          <div className="shrink-0 pt-4">
+          <div className="shrink-0 p-4">
             <nav
-              className="mb-6 flex justify-center px-4 sm:mb-8"
+              className="flex justify-center"
               aria-label="Vista del menú: todos los accesos o por grupo"
             >
-              <div className="flex max-w-full flex-wrap items-center justify-center gap-1 rounded-2xl border border-border/80 bg-muted/45 px-2 py-2 shadow-lg backdrop-blur-2xl sm:flex-nowrap sm:gap-1.5 sm:px-3 sm:py-2.5">
+              <div className="flex max-w-full flex-wrap items-center justify-center gap-0.5 rounded-2xl border border-border/80 bg-muted/45 px-1.5 py-1 shadow-lg backdrop-blur-2xl sm:flex-nowrap sm:gap-1 sm:px-2 sm:py-1.5">
                 {menuSlides.map((slide, index) => (
                   <button
                     key={slide.key}
                     type="button"
                     onClick={() => scrollTo(index)}
                     className={cn(
-                      "rounded-xl px-2.5 py-2 text-[11px] font-semibold transition-colors sm:px-5 sm:py-2.5 sm:text-sm",
+                      "rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors sm:px-3.5 sm:py-2 sm:text-sm",
                       selectedIndex === index
                         ? "bg-primary/18 text-primary shadow-sm"
                         : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
@@ -967,7 +967,7 @@ export default function MenuPage() {
 
             {favToast ? (
               <p
-                className="mx-auto mb-4 max-w-lg rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-100 sm:text-sm"
+                className="mx-auto mt-3 max-w-lg rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-100 sm:text-sm"
                 role="status"
               >
                 {favToast}
