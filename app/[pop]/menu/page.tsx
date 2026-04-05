@@ -80,8 +80,11 @@ function buildMenuSlides(sections: MenuSectionDef[]): MenuSlide[] {
   ]
 }
 
+/**
+ * Móvil: ancho completo. sm+: más ancho que antes (tiles +12px y gap-6) para que no corten bordes / hover.
+ */
 const MENU_GRID_MAX_W =
-  "max-w-[min(100%,20.5rem)] sm:max-w-[min(100%,31.5rem)]"
+  "w-full max-w-none sm:mx-auto sm:max-w-[min(100%,36rem)]"
 
 /** Degradé superior: todo en 10px (igual que pt del grid) para que la 1ª hilera quede en máscara transparente. */
 const MENU_ROW_OVERLAY_TOP_FADE_PX = 10
@@ -226,7 +229,7 @@ function MenuGridScrollArea({
     return (
       <div
         className={cn(
-          "mx-auto w-full px-4 pb-8 pt-2.5 sm:px-5 sm:pb-10 sm:pt-2.5",
+          "mx-auto w-full pb-8 pt-2.5 sm:pb-10 sm:pt-2.5",
           MENU_GRID_MAX_W,
         )}
       >
@@ -252,7 +255,7 @@ function MenuGridScrollArea({
         aria-label={`${slideTitle}: desplazá para ver más accesos`}
       >
         {/* pt 10px alineado a la banda superior de la máscara del overlay; pb aire bajo última fila */}
-        <div className="px-4 pb-8 pt-2.5 sm:px-5 sm:pb-10 sm:pt-2.5">
+        <div className="pb-8 pt-2.5 sm:pb-10 sm:pt-2.5">
           {children}
         </div>
       </div>
@@ -339,7 +342,7 @@ function MenuMiniCard({
           onClick={onNavigate}
           title={labelHoverSwap ? fullLabel : undefined}
           className={cn(
-            "group/menu-tile relative z-0 grid h-full min-h-[6.75rem] w-full grid-cols-2 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-2xl border border-white/[0.1] bg-gradient-to-b from-[rgb(20_25_22_/0.72)] via-[rgb(17_22_20_/0.66)] to-[rgb(14_18_16_/0.6)] p-2.5 text-left backdrop-blur-[2px] sm:min-h-[8rem] sm:p-3",
+            "group/menu-tile relative z-0 grid h-full min-h-0 w-full grid-cols-2 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-2xl border border-white/[0.1] bg-gradient-to-b from-[rgb(20_25_22_/0.72)] via-[rgb(17_22_20_/0.66)] to-[rgb(14_18_16_/0.6)] p-2.5 text-left backdrop-blur-[2px] sm:p-3",
             "shadow-[0_12px_32px_-14px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.06),inset_0_-1px_0_0_rgba(0,0,0,0.26)]",
             "transition-[transform,box-shadow,background-color,border-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
             "hover:-translate-y-0.5 hover:scale-[1.042] hover:border-white/16 hover:from-[rgb(22_28_24_/0.78)] hover:via-[rgb(18_24_21_/0.72)] hover:to-[rgb(15_20_17_/0.66)]",
@@ -1007,33 +1010,42 @@ export default function MenuPage() {
                   return (
                     <div
                       key={slide.key}
-                      className="flex h-full min-h-0 min-w-0 flex-[0_0_100%] flex-col px-3 sm:px-8"
+                      className="flex h-full min-h-0 min-w-0 flex-[0_0_100%] flex-col px-4 sm:px-10 md:px-11"
                     >
                       <MenuGridScrollArea
                         needsScroll={needsScroll}
                         slideTitle={slide.title}
                       >
-                        <div
-                          className={cn(
-                            "mx-auto grid w-full grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-3",
-                            "[grid-auto-rows:minmax(6.75rem,auto)] sm:[grid-auto-rows:minmax(8rem,auto)]",
-                          )}
-                        >
-                          {items.map((item) => (
-                            <MenuMiniCard
-                              key={item.id}
-                              item={item}
-                              popSlug={popSlug}
-                              isFavorite={favoriteIds.includes(item.id)}
-                              favoritesFull={favoritesFull}
-                              dockEditing={dockEditing}
-                              onNavigate={() => {
-                                const to = resolveMenuHref(item, popSlug)
-                                if (to) router.push(to)
-                              }}
-                              onToggleFavorite={() => toggleFavorite(item.id)}
-                            />
-                          ))}
+                        {/* Aire en sm+ para estrella, +12px tiles y resplandor hover sin tocar el borde */}
+                        <div className="min-w-0 sm:px-1 md:px-1.5">
+                          <div
+                            className={cn(
+                              "mx-auto grid w-full grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-6",
+                            )}
+                          >
+                            {items.map((item) => (
+                              <div
+                                key={item.id}
+                                className={cn(
+                                  "aspect-square min-h-0 w-full min-w-0",
+                                  "sm:w-[calc(100%+12px)] sm:max-w-none sm:justify-self-center sm:aspect-square",
+                                )}
+                              >
+                                <MenuMiniCard
+                                  item={item}
+                                  popSlug={popSlug}
+                                  isFavorite={favoriteIds.includes(item.id)}
+                                  favoritesFull={favoritesFull}
+                                  dockEditing={dockEditing}
+                                  onNavigate={() => {
+                                    const to = resolveMenuHref(item, popSlug)
+                                    if (to) router.push(to)
+                                  }}
+                                  onToggleFavorite={() => toggleFavorite(item.id)}
+                                />
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </MenuGridScrollArea>
                       {items.length === 0 ? (
