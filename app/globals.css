@@ -431,6 +431,36 @@
     animation: rootsy-dock-wiggle 0.42s ease-in-out infinite;
   }
 
+  @keyframes rootsy-help-mascot-enter {
+    from {
+      opacity: 0;
+      transform: translate3d(18px, 20px, 0) scale(0.88);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+
+  @keyframes rootsy-help-mascot-float {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      transform: translate3d(0, -6px, 0);
+    }
+  }
+
+  .rootsy-help-mascot-widget {
+    animation: rootsy-help-mascot-enter 0.76s cubic-bezier(0.22, 1, 0.34, 1)
+      both;
+  }
+
+  .rootsy-help-mascot-widget-inner {
+    animation: rootsy-help-mascot-float 3.4s ease-in-out 0.8s infinite;
+  }
+
   /**
    * Menú POP: scroll interno — thumb oculto hasta interactuar; accent = --primary
    */
@@ -503,6 +533,15 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .rootsy-help-mascot-widget,
+    .rootsy-help-mascot-widget-inner {
+      animation: none !important;
+    }
+
+    .rootsy-help-mascot-widget {
+      opacity: 1;
+    }
+
     .rootsy-dock-edit-wiggle {
       animation: none;
     }

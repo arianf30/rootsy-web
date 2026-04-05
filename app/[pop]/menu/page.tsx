@@ -35,6 +35,7 @@ import {
 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 
+import { MenuHelpMascot } from "@/components/pop/menu-help-mascot"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -1080,13 +1081,7 @@ export default function MenuPage() {
       </div>
       </div>
 
-      <button
-        type="button"
-        className="group absolute bottom-4 right-4 z-30 hidden size-12 items-center justify-center rounded-full border border-border bg-muted/95 backdrop-blur-xl transition-all hover:bg-muted active:scale-95 sm:flex"
-        aria-label="Ayuda"
-      >
-        <HelpCircle className="size-5 text-muted-foreground group-hover:text-foreground/80" />
-      </button>
+      <MenuHelpMascot />
 
       <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
         <SheetContent
