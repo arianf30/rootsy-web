@@ -81,10 +81,11 @@ function buildMenuSlides(sections: MenuSectionDef[]): MenuSlide[] {
 }
 
 /**
- * Móvil: ancho completo. sm+: más ancho que antes (tiles +12px y gap-6) para que no corten bordes / hover.
+ * Bloque del menú dentro de la fila: ancho completo hasta máx. 568px centrado.
+ * La grilla va dentro (3 cols móvil · 4 cols desktop, filas automáticas).
  */
-const MENU_GRID_MAX_W =
-  "w-full max-w-none sm:mx-auto sm:max-w-[min(100%,36rem)]"
+const MENU_GRID_BLOCK =
+  "mx-auto w-full min-w-0 max-w-[min(100%,568px)]"
 
 /** Máscara overlay fila menú: franja superior (px); inferior más ancha para fundir con el dock. */
 const MENU_ROW_OVERLAY_TOP_FADE_PX = 12
@@ -214,7 +215,7 @@ function MenuGridScrollArea({
       <div
         className={cn(
           "mx-auto w-full pb-8 pt-2.5 sm:pb-10 sm:pt-2.5",
-          MENU_GRID_MAX_W,
+          MENU_GRID_BLOCK,
         )}
       >
         {children}
@@ -226,7 +227,7 @@ function MenuGridScrollArea({
     <div
       className={cn(
         "relative mx-auto flex min-h-0 w-full min-w-0 flex-1 basis-0 flex-col",
-        MENU_GRID_MAX_W,
+        MENU_GRID_BLOCK,
       )}
     >
       <div
@@ -951,20 +952,12 @@ export default function MenuPage() {
                         needsScroll={needsScroll}
                         slideTitle={slide.title}
                       >
-                        {/* Aire en sm+ para estrella, +12px tiles y resplandor hover sin tocar el borde */}
-                        <div className="min-w-0 max-w-full sm:px-1 md:px-1.5">
-                          <div
-                            className={cn(
-                              "mx-auto grid w-full min-w-0 max-w-full grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-6",
-                            )}
-                          >
+                        <div className="min-w-0 w-full sm:px-1 md:px-1.5">
+                          <div className="grid w-full min-w-0 grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-3">
                             {items.map((item) => (
                               <div
                                 key={item.id}
-                                className={cn(
-                                  "aspect-square min-h-0 w-full min-w-0",
-                                  "sm:w-[calc(100%+12px)] sm:max-w-none sm:justify-self-center sm:aspect-square",
-                                )}
+                                className="aspect-square min-h-0 w-full min-w-0"
                               >
                                 <MenuMiniCard
                                   item={item}
