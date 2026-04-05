@@ -325,9 +325,11 @@ function MenuMiniCard({
   const fullLabel = item.name
   const labelHoverSwap = shortLabel !== fullLabel
 
-  /** Altura fija del rótulo: caben 2 líneas sin crecer el botón; ancladas abajo suben en hover. */
+  /** Base tipográfica del rótulo; el nombre largo (2 líneas) usa interlineado más cerrado. */
   const labelTileClass =
-    "text-pretty text-left text-xs font-semibold leading-snug tracking-tight text-white/92 sm:text-sm sm:leading-snug"
+    "text-pretty text-left text-xs font-semibold tracking-tight text-white/92 sm:text-sm"
+  const labelLeadingShort = "leading-snug"
+  const labelLeadingFull = "leading-[1.15] sm:leading-tight"
 
   return (
     <div className="relative h-full w-full rounded-2xl hover:z-20">
@@ -337,7 +339,7 @@ function MenuMiniCard({
           onClick={onNavigate}
           title={labelHoverSwap ? fullLabel : undefined}
           className={cn(
-            "group/menu-tile relative z-0 flex h-full min-h-[6.75rem] w-full flex-col overflow-hidden rounded-2xl border border-white/[0.09] bg-[#121816] p-2.5 text-left sm:min-h-[8rem] sm:p-3",
+            "group/menu-tile relative z-0 grid h-full min-h-[6.75rem] w-full grid-cols-2 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-2xl border border-white/[0.09] bg-[#121816] p-2.5 text-left sm:min-h-[8rem] sm:p-3",
             "shadow-[0_10px_28px_-12px_rgba(0,0,0,0.55),inset_0_1px_0_0_rgba(255,255,255,0.05)]",
             "transition-[transform,box-shadow,background-color,border-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
             "hover:-translate-y-0.5 hover:scale-[1.042] hover:border-white/18 hover:bg-[#181f1c]",
@@ -353,52 +355,45 @@ function MenuMiniCard({
             aria-hidden
           />
 
-          <div className="relative z-[1] flex shrink-0 items-start justify-between gap-1">
-            <div
-              className={cn(
-                "flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] ring-1 ring-white/[0.08] transition-[transform,background-color,box-shadow] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:size-9",
-                "group-hover/menu-tile:scale-105 group-hover/menu-tile:bg-white/[0.11] group-hover/menu-tile:shadow-[0_0_16px_-4px_rgba(52,211,153,0.35)]",
-                "motion-reduce:group-hover/menu-tile:scale-100",
-              )}
-            >
-              <Icon className="size-4 text-emerald-200/90" aria-hidden />
-            </div>
-            <div className="flex min-h-5 shrink-0 flex-col items-end gap-1">
-              {item.badge?.kind === "count" ? (
-                <span
-                  className="flex min-h-5 min-w-5 items-center justify-center rounded-full border border-white/15 bg-black/40 px-1 text-[9px] font-bold tabular-nums text-white"
-                  aria-label={`${item.badge.value} avisos`}
-                >
-                  {item.badge.value}
-                </span>
-              ) : null}
-              {item.badge?.kind === "pill" ? (
-                <span
-                  className={cn(
-                    "rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white",
-                    item.badge.label === "HOT"
-                      ? "border border-amber-400/45 bg-amber-600/85"
-                      : "border border-emerald-400/40 bg-emerald-600/35",
-                  )}
-                >
-                  {item.badge.label}
-                </span>
-              ) : null}
-            </div>
-          </div>
-
           <div
             className={cn(
-              "relative z-[1] mt-auto w-full pt-2 pb-1.5",
-              labelHoverSwap &&
-                "transition-transform duration-200 ease-out motion-reduce:transition-none group-hover/menu-tile:-translate-y-1 motion-reduce:group-hover/menu-tile:translate-y-0",
+              "relative z-[1] flex size-8 shrink-0 items-center justify-center justify-self-start rounded-lg bg-white/[0.06] ring-1 ring-white/[0.08] transition-[transform,background-color,box-shadow] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:size-9",
+              "group-hover/menu-tile:scale-105 group-hover/menu-tile:bg-white/[0.11] group-hover/menu-tile:shadow-[0_0_16px_-4px_rgba(52,211,153,0.35)]",
+              "motion-reduce:group-hover/menu-tile:scale-100",
             )}
           >
+            <Icon className="size-4 text-emerald-200/90" aria-hidden />
+          </div>
+          <div className="relative z-[1] flex min-h-5 min-w-0 shrink-0 flex-col items-end justify-self-end gap-1">
+            {item.badge?.kind === "count" ? (
+              <span
+                className="flex min-h-5 min-w-5 items-center justify-center rounded-full border border-white/15 bg-black/40 px-1 text-[9px] font-bold tabular-nums text-white"
+                aria-label={`${item.badge.value} avisos`}
+              >
+                {item.badge.value}
+              </span>
+            ) : null}
+            {item.badge?.kind === "pill" ? (
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white",
+                  item.badge.label === "HOT"
+                    ? "border border-amber-400/45 bg-amber-600/85"
+                    : "border border-emerald-400/40 bg-emerald-600/35",
+                )}
+              >
+                {item.badge.label}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="relative z-[1] col-span-2 row-start-2 flex min-h-0 w-full flex-col justify-end self-stretch pt-2">
             {labelHoverSwap ? (
               <div className="relative isolate h-[2.5rem] w-full sm:h-[2.75rem]">
                 <p
                   className={cn(
                     labelTileClass,
+                    labelLeadingShort,
                     "absolute bottom-0 left-0 right-0 transition-opacity duration-200 ease-out motion-reduce:transition-none",
                     "group-hover/menu-tile:pointer-events-none group-hover/menu-tile:opacity-0",
                     "motion-reduce:opacity-100 motion-reduce:group-hover/menu-tile:opacity-100",
@@ -411,6 +406,7 @@ function MenuMiniCard({
                 <p
                   className={cn(
                     labelTileClass,
+                    labelLeadingFull,
                     "absolute bottom-0 left-0 right-0 opacity-0 transition-opacity duration-200 ease-out motion-reduce:transition-none",
                     "group-hover/menu-tile:opacity-100 motion-reduce:hidden",
                   )}
@@ -422,7 +418,14 @@ function MenuMiniCard({
               </div>
             ) : (
               <div className="relative h-[2.5rem] w-full sm:h-[2.75rem]">
-                <p className={cn(labelTileClass, "absolute bottom-0 left-0 right-0")} lang="es">
+                <p
+                  className={cn(
+                    labelTileClass,
+                    labelLeadingShort,
+                    "absolute bottom-0 left-0 right-0",
+                  )}
+                  lang="es"
+                >
                   {fullLabel}
                 </p>
               </div>
@@ -656,7 +659,7 @@ export default function MenuPage() {
       }
       if (prev.length >= MAX_MENU_FAVORITES) {
         setFavToast(
-          "Máximo 5 favoritos (como el dock del iPhone). Eliminá uno desde Editar o la estrella.",
+          "Máximo 5 favoritos. Elimina uno desde Editar, o con la estrella del botón.",
         )
         window.setTimeout(() => setFavToast(null), 4200)
         return prev
