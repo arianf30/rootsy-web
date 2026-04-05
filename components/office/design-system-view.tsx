@@ -161,8 +161,8 @@ export function DesignSystemView() {
           <DsSection
             id="foundation-colors"
             eyebrow="Fundamentos"
-            title="Paleta semántica"
-            description="Colores mapeados a variables del tema (claro u oscuro según el interruptor del Office). Misma lógica que en la guía de colores de Tailwind: nombre + token + muestra."
+            title="Paleta"
+            description="Familias primitivas 50–950 (forest, ink, risk…) ancladas en los colores que ya usamos, más el puente a tokens shadcn. Así podés pedir ajustes finos por paso sin perder coherencia entre escalas."
           >
             <DsFoundationColors />
           </DsSection>
