@@ -31,7 +31,7 @@ export default function RegisterPage() {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.05),transparent_45%)]" />
           </div>
 
-          <div className="relative w-full max-w-lg rounded-4xl border border-white/12 bg-white/[0.035] p-7 shadow-[0_30px_90px_-42px_rgba(10,18,14,0.7),inset_0_1px_0_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-9">
+          <div className="relative w-full max-w-lg rounded-4xl border border-white/12 bg-white/[0.035] p-7 text-zinc-50 shadow-[0_30px_90px_-42px_rgba(10,18,14,0.7),inset_0_1px_0_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-9">
             <Link
               href="/"
               className="absolute -top-6 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/16 bg-[#0b1110]/90 px-4 py-2 text-sm font-semibold tracking-wide text-white shadow-[0_14px_30px_-18px_rgba(0,0,0,0.8)] ring-1 ring-emerald-400/25 transition-all hover:scale-[1.02] hover:border-emerald-300/45 hover:ring-emerald-300/35"
@@ -44,16 +44,16 @@ export default function RegisterPage() {
             <div className="pointer-events-none absolute -top-10 left-1/2 h-20 w-2/3 -translate-x-1/2 rounded-full bg-emerald-400/18 blur-2xl" />
 
             <div className="space-y-1.5">
-              <h1 className="text-3xl font-extrabold tracking-tight sm:text-[2.1rem]">
+              <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-[2.1rem]">
                 Registrarse
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-zinc-200">
                 Ya tengo mi usuario, quiero{" "}
                 <Link
                   href="/login"
-                  className="font-semibold text-meadow transition-colors hover:text-emerald-500"
+                  className="font-semibold text-emerald-300 underline-offset-4 transition-colors hover:text-emerald-200 hover:underline"
                 >
-                  iniciar sesion
+                  iniciar sesión
                 </Link>
                 .
               </p>
@@ -62,47 +62,55 @@ export default function RegisterPage() {
             <form className="mt-8 space-y-5" noValidate>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="nombre">Nombre</Label>
+                  <Label htmlFor="nombre" className="text-zinc-100">
+                    Nombre
+                  </Label>
                   <Input
                     id="nombre"
                     type="text"
                     placeholder="Nombre"
-                    className="h-12 border-white/14 bg-white/8 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.9)] focus-visible:ring-emerald-400/40"
+                    className="h-12 border-white/14 bg-white/8 text-zinc-50 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.9)] placeholder:text-zinc-400 focus-visible:ring-emerald-400/40"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="apellido">Apellido</Label>
+                  <Label htmlFor="apellido" className="text-zinc-100">
+                    Apellido
+                  </Label>
                   <Input
                     id="apellido"
                     type="text"
                     placeholder="Apellido"
-                    className="h-12 border-white/14 bg-white/8 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.9)] focus-visible:ring-emerald-400/40"
+                    className="h-12 border-white/14 bg-white/8 text-zinc-50 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.9)] placeholder:text-zinc-400 focus-visible:ring-emerald-400/40"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="correo">Correo electronico</Label>
+                <Label htmlFor="correo" className="text-zinc-100">
+                  Correo electronico
+                </Label>
                 <Input
                   id="correo"
                   type="email"
                   placeholder="Correo electronico"
-                  className="h-12 border-white/14 bg-white/8 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.9)] focus-visible:ring-emerald-400/40"
+                  className="h-12 border-white/14 bg-white/8 text-zinc-50 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.9)] placeholder:text-zinc-400 focus-visible:ring-emerald-400/40"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password" className="text-zinc-100">
+                  Contraseña
+                </Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type="password"
                     placeholder="Contraseña"
-                    className="h-12 border-white/14 bg-white/8 pr-10 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.9)] focus-visible:ring-emerald-400/40"
+                    className="h-12 border-white/14 bg-white/8 pr-10 text-zinc-50 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.9)] placeholder:text-zinc-400 focus-visible:ring-emerald-400/40"
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 inline-flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                    className="absolute inset-y-0 right-0 inline-flex w-10 items-center justify-center text-zinc-400 transition-colors hover:text-zinc-100"
                     aria-label="Mostrar u ocultar contraseña"
                   >
                     <Eye className="size-4.5" aria-hidden />
@@ -110,25 +118,25 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <p className="text-sm leading-relaxed text-muted-foreground">
+              <p className="text-sm leading-relaxed text-zinc-200">
                 Al hacer clic en "Registrarme", aceptas los{" "}
                 <button
                   type="button"
-                  className="font-medium text-meadow transition-colors hover:text-emerald-500"
+                  className="font-medium text-emerald-300 underline-offset-2 transition-colors hover:text-emerald-200 hover:underline"
                 >
                   Terminos y condiciones
                 </button>
                 , la{" "}
                 <button
                   type="button"
-                  className="font-medium text-meadow transition-colors hover:text-emerald-500"
+                  className="font-medium text-emerald-300 underline-offset-2 transition-colors hover:text-emerald-200 hover:underline"
                 >
                   Politica de privacidad
                 </button>{" "}
                 y la{" "}
                 <button
                   type="button"
-                  className="font-medium text-meadow transition-colors hover:text-emerald-500"
+                  className="font-medium text-emerald-300 underline-offset-2 transition-colors hover:text-emerald-200 hover:underline"
                 >
                   Politica de cookies
                 </button>
@@ -148,12 +156,12 @@ export default function RegisterPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="h-12 w-full justify-center gap-3 border-white/20 bg-black/15 text-foreground/85 hover:bg-white/10"
+                className="h-12 w-full justify-center gap-3 border-white/20 bg-black/15 text-zinc-100 hover:bg-white/10 hover:text-white"
               >
-                <span className="inline-flex size-5 items-center justify-center rounded-full border border-border bg-white text-[11px] font-bold text-[#4285F4]">
+                <span className="inline-flex size-5 items-center justify-center rounded-full border border-white/25 bg-white text-[11px] font-bold text-[#4285F4]">
                   G
                 </span>
-                Registrate con tu cuenta de Google.
+                Registrarme con Google
               </Button>
             </div>
           </div>
