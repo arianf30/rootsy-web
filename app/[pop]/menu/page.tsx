@@ -1091,7 +1091,7 @@ export default function MenuPage() {
 
       <button
         type="button"
-        className="group absolute bottom-4 right-4 z-30 flex size-11 items-center justify-center rounded-full border border-border bg-muted/95 backdrop-blur-xl transition-all hover:bg-muted active:scale-95 sm:size-12"
+        className="group absolute bottom-4 right-4 z-30 hidden size-12 items-center justify-center rounded-full border border-border bg-muted/95 backdrop-blur-xl transition-all hover:bg-muted active:scale-95 sm:flex"
         aria-label="Ayuda"
       >
         <HelpCircle className="size-5 text-muted-foreground group-hover:text-foreground/80" />
