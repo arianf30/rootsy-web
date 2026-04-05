@@ -3,11 +3,13 @@
 import withAuth from "@/hoc/withAuth"
 import Image from "next/image"
 import Link from "next/link"
+import { completeSale } from "@/app/[siteId]/[popId]/sale/completeSale"
 import {
   getSaleCatalog,
   type SaleCatalogArticle,
   type SaleCatalogClient,
   type SaleCatalogPaymentMethod,
+  type SaleOpenCashSession,
 } from "@/app/[siteId]/[popId]/sale/actions"
 import {
   DEFAULT_SALE_SITE_ID,
@@ -310,6 +312,9 @@ function SalePage() {
       setSalePaymentMethods([])
       setCanReadClients(false)
       setCanReadPaymentMethods(false)
+      setCanCreateSale(false)
+      setCanReadCashRegisters(false)
+      setOpenCashSession(null)
       setSaleCategoryNames([])
       setPopName("")
       setCatalogError(res.error)
@@ -321,6 +326,9 @@ function SalePage() {
     setSalePaymentMethods(res.paymentMethods)
     setCanReadClients(res.canReadClients)
     setCanReadPaymentMethods(res.canReadPaymentMethods)
+    setCanCreateSale(res.canCreateSale)
+    setCanReadCashRegisters(res.canReadCashRegisters)
+    setOpenCashSession(res.openCashSession)
     setInvoiceTypeSiteId(res.invoiceTypeSiteId)
     setSaleCategoryNames(
       [...new Set(res.categories.map((c) => c.name).filter(Boolean))],
@@ -377,6 +385,13 @@ function SalePage() {
   const [valorDescuentoFijo, setValorDescuentoFijo] = useState(0)
   const [descuentoModalAbierto, setDescuentoModalAbierto] = useState(false)
   const [descartarConfirmOpen, setDescartarConfirmOpen] = useState(false)
+  const [venderConfirmOpen, setVenderConfirmOpen] = useState(false)
+  const [ventaSubmitting, setVentaSubmitting] = useState(false)
+  const [ventaError, setVentaError] = useState<string | null>(null)
+  const [canCreateSale, setCanCreateSale] = useState(false)
+  const [canReadCashRegisters, setCanReadCashRegisters] = useState(false)
+  const [openCashSession, setOpenCashSession] =
+    useState<SaleOpenCashSession | null>(null)
   const [descuentoDraftModo, setDescuentoDraftModo] = useState<
     "porcentaje" | "fijo"
   >("porcentaje")
@@ -524,8 +539,19 @@ function SalePage() {
   ])
 
   const puedeRegistrarVenta = useMemo(
-    () => hayItemsEnPedido && metodoPagoSeleccionado != null,
-    [hayItemsEnPedido, metodoPagoSeleccionado?.id],
+    () =>
+      hayItemsEnPedido &&
+      metodoPagoSeleccionado != null &&
+      canCreateSale &&
+      canReadCashRegisters &&
+      openCashSession != null,
+    [
+      hayItemsEnPedido,
+      metodoPagoSeleccionado?.id,
+      canCreateSale,
+      canReadCashRegisters,
+      openCashSession,
+    ],
   )
 
   const limpiarVenta = useCallback(() => {
@@ -544,7 +570,55 @@ function SalePage() {
       return efectivo ? { id: efectivo.id, label: efectivo.name } : null
     })
     setDescartarConfirmOpen(false)
+    setVenderConfirmOpen(false)
+    setVentaError(null)
   }, [salePaymentMethods])
+
+  const confirmarVenta = useCallback(async () => {
+    if (!popId || !siteId || !metodoPagoSeleccionado) return
+    setVentaError(null)
+    setVentaSubmitting(true)
+    try {
+      const res = await completeSale(popId, {
+        siteId,
+        lines: carrito.map((i) => ({
+          articleId: i.productoId,
+          quantity: i.cantidad,
+          itemDiscountMode: itemDescuentoModo[i.productoId] ?? "porcentaje",
+          itemDiscountDraft: itemDescuentoDraft[i.productoId] ?? "",
+          comment: itemComentarios[i.productoId],
+        })),
+        clientId: clienteSeleccionado?.id ?? null,
+        paymentMethodId: metodoPagoSeleccionado.id,
+        generalDiscountMode: modoDescuento === "porcentaje" ? "porcentaje" : "fijo",
+        valorDescuentoPorcentaje,
+        valorDescuentoFijo,
+        invoiceTypeLabel: comprobante,
+      })
+      if (!res.success) {
+        setVentaError(res.error)
+        return
+      }
+      setVenderConfirmOpen(false)
+      limpiarVenta()
+    } finally {
+      setVentaSubmitting(false)
+    }
+  }, [
+    popId,
+    siteId,
+    carrito,
+    itemDescuentoModo,
+    itemDescuentoDraft,
+    itemComentarios,
+    clienteSeleccionado,
+    metodoPagoSeleccionado,
+    modoDescuento,
+    valorDescuentoPorcentaje,
+    valorDescuentoFijo,
+    comprobante,
+    limpiarVenta,
+  ])
 
   useEffect(() => {
     if (modoDescuento !== "fijo") return
@@ -1638,13 +1712,23 @@ function SalePage() {
                   </Button>
                   <Button
                     type="button"
-                    disabled={!puedeRegistrarVenta}
+                    disabled={!puedeRegistrarVenta || ventaSubmitting}
+                    onClick={() => {
+                      setVentaError(null)
+                      setVenderConfirmOpen(true)
+                    }}
                     title={
                       !hayItemsEnPedido
                         ? "Agregá productos al pedido."
                         : !metodoPagoSeleccionado
                           ? "Elegí un medio de pago para continuar."
-                          : undefined
+                          : !canCreateSale
+                            ? "No tenés permiso para registrar ventas."
+                            : !canReadCashRegisters
+                              ? "Se requiere permiso para ver cajas y asociar la venta a una sesión."
+                              : !openCashSession
+                                ? "Abrí una sesión de caja en Cajas antes de cobrar."
+                                : undefined
                     }
                     className="h-11 gap-2 border-0 bg-emerald-600 font-semibold text-white shadow-[0_1px_2px_rgba(0,0,0,0.06)] hover:bg-emerald-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f8fafc] active:bg-emerald-700 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-45"
                   >
@@ -2099,6 +2183,51 @@ function SalePage() {
               className="border-0 bg-rose-600 text-white hover:bg-rose-500 focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
             >
               Descartar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={venderConfirmOpen}
+        onOpenChange={(open) => {
+          setVenderConfirmOpen(open)
+          if (!open) setVentaError(null)
+        }}
+      >
+        <AlertDialogContent className="border-border bg-card text-foreground sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Confirmar venta?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-muted-foreground">
+                <p>
+                  Total a cobrar:{" "}
+                  <span className="font-semibold text-foreground tabular-nums">
+                    {fmt.format(total)}
+                  </span>
+                  . Se guardará la venta, el movimiento de stock (FIFO) y el asiento contable
+                  (cobro, ventas, IVA si aplica y costo de mercaderías).
+                </p>
+                {ventaError ? (
+                  <p className="text-sm text-rose-600">{ventaError}</p>
+                ) : null}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border" disabled={ventaSubmitting}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              type="button"
+              disabled={ventaSubmitting}
+              onClick={(e) => {
+                e.preventDefault()
+                void confirmarVenta()
+              }}
+              className="border-0 bg-emerald-600 text-white hover:bg-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+            >
+              {ventaSubmitting ? "Guardando…" : "Confirmar venta"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -7,6 +7,8 @@ export function getMenuResourceAction(
   if (!menuLink) return null
   if (menuLink === "section") return null
   if (menuLink === "sale") return { resource: "sale", action: "read" }
+  if (menuLink === "operations")
+    return { resource: "sale", action: "read" }
   if (menuLink === "settings") return { resource: "settings", action: "read" }
   if (menuLink === "hr") return { resource: "hr", action: "read" }
   if (menuLink === "articles") return { resource: "articles", action: "read" }

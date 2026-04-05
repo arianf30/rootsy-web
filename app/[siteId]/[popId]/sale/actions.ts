@@ -37,6 +37,12 @@ export type SaleCatalogPaymentMethod = {
   accountingAccountId: string | null
 }
 
+export type SaleOpenCashSession = {
+  sessionId: string
+  cashRegisterId: string
+  registerName: string
+}
+
 export async function getSaleCatalog(popId: string): Promise<
   | {
       success: true
@@ -47,6 +53,9 @@ export async function getSaleCatalog(popId: string): Promise<
       paymentMethods: SaleCatalogPaymentMethod[]
       canReadClients: boolean
       canReadPaymentMethods: boolean
+      canCreateSale: boolean
+      canReadCashRegisters: boolean
+      openCashSession: SaleOpenCashSession | null
       invoiceTypeSiteId: string
     }
   | { success: false; error: string }
@@ -85,6 +94,16 @@ export async function getSaleCatalog(popId: string): Promise<
       snap.keys,
       POP_PERMS.PAYMENT_METHOD_READ.resource,
       POP_PERMS.PAYMENT_METHOD_READ.action,
+    )
+    const canCreateSale = permissionKeysInclude(
+      snap.keys,
+      POP_PERMS.SALE_CREATE.resource,
+      POP_PERMS.SALE_CREATE.action,
+    )
+    const canReadCashRegisters = permissionKeysInclude(
+      snap.keys,
+      POP_PERMS.CASH_REGISTER_READ.resource,
+      POP_PERMS.CASH_REGISTER_READ.action,
     )
 
     const popRes = await getPopById(popId)
@@ -159,6 +178,40 @@ export async function getSaleCatalog(popId: string): Promise<
       }))
     }
 
+    let openCashSession: SaleOpenCashSession | null = null
+    if (canReadCashRegisters) {
+      const { data: regs, error: regErr } = await supabase
+        .from("cash_registers")
+        .select("id, name, sort_order")
+        .eq("pop_id", popId)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true })
+      const { data: openSessions, error: sessErr } = await supabase
+        .from("cash_register_sessions")
+        .select("id, cash_register_id")
+        .eq("pop_id", popId)
+        .eq("status", "open")
+      if (!regErr && !sessErr && regs && openSessions) {
+        const openByReg = new Map<string, string>()
+        for (const s of openSessions) {
+          openByReg.set(String(s.cash_register_id), String(s.id))
+        }
+        for (const r of regs) {
+          const rid = String(r.id)
+          const sid = openByReg.get(rid)
+          if (sid) {
+            openCashSession = {
+              sessionId: sid,
+              cashRegisterId: rid,
+              registerName: String(r.name ?? ""),
+            }
+            break
+          }
+        }
+      }
+    }
+
     let paymentMethods: SaleCatalogPaymentMethod[] = []
     if (canReadPaymentMethods) {
       const { data: pmRows, error: pmErr } = await supabase
@@ -191,6 +244,9 @@ export async function getSaleCatalog(popId: string): Promise<
       paymentMethods,
       canReadClients,
       canReadPaymentMethods,
+      canCreateSale,
+      canReadCashRegisters,
+      openCashSession,
       invoiceTypeSiteId: DEFAULT_SALE_SITE_ID,
     }
   } catch (e: unknown) {

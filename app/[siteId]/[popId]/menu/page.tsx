@@ -49,6 +49,7 @@ import {
 
 export type MenuItemLink =
   | "sale"
+  | "operations"
   | "settings"
   | "hr"
   | "articles"
@@ -95,7 +96,7 @@ const menuSectionsRaw: Record<string, MenuSectionDef> = {
       { name: "Presupuestos", icon: FileText, link: "section" },
       { name: "Resumen", icon: BarChart3, badge: "NEW", link: "section" },
       { name: "Estadísticas", icon: PieChart, link: "section" },
-      { name: "Operaciones", icon: Activity, link: "section" },
+      { name: "Operaciones", icon: Activity, link: "operations" },
       { name: "Movimientos", icon: ArrowLeftRight, link: "section" },
       { name: "Inventario", icon: ClipboardList, link: "inventory" },
       { name: "Gastos", icon: Receipt, link: "section" },

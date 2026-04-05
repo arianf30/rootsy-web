@@ -186,3 +186,12 @@ export const CHART_GASTO_MERMA_CODES: readonly string[] = [
   "6.2.1.02",
   "6.1.1.01",
 ]
+
+export const CHART_IVA_PAGAR_CODES: readonly string[] = ["2.1.2.01"]
+
+export const CHART_COSTO_VENTAS_CODES: readonly string[] = ["5.1.1.01"]
+
+export const CHART_VENTAS_GRAVADAS_CODES: readonly string[] = [
+  ARG_V3_CHART_CODE.ventas,
+  "4.1.1.02",
+]
