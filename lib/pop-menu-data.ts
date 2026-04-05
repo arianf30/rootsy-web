@@ -39,6 +39,10 @@ export type MenuBadge =
 export type MenuItemDef = {
   id: string
   name: string
+  /**
+   * Texto corto en el tile (idealmente una palabra). En hover se muestra `name` completo.
+   */
+  tileLabel?: string
   icon: LucideIcon
   badge?: MenuBadge
   /** Ruta relativa al pop (sin leading slash) o función */
@@ -59,6 +63,7 @@ export const POP_MENU_SECTIONS: MenuSectionDef[] = [
       {
         id: "venta-rapida",
         name: "Venta rápida",
+        tileLabel: "Rápida",
         icon: Zap,
         badge: { kind: "pill", label: "HOT" },
         href: (slug) => `/${slug}/sale`,
@@ -66,29 +71,34 @@ export const POP_MENU_SECTIONS: MenuSectionDef[] = [
       {
         id: "venta-salon",
         name: "Venta de salón",
+        tileLabel: "Salón",
         icon: UtensilsCrossed,
         href: (slug) => `/${slug}/sale`,
       },
       {
         id: "venta-mostrador",
         name: "Venta de mostrador",
+        tileLabel: "Mostrador",
         icon: Monitor,
         href: (slug) => `/${slug}/sale`,
       },
       {
         id: "comprar-mercaderia",
         name: "Comprar mercadería",
+        tileLabel: "Compras",
         icon: ShoppingBag,
       },
       {
         id: "control-stock",
         name: "Control de stock",
+        tileLabel: "Stock",
         icon: PackageSearch,
         badge: { kind: "count", value: 3 },
       },
       {
         id: "productos-preparados",
         name: "Productos preparados",
+        tileLabel: "Preparados",
         icon: ChefHat,
       },
       {
@@ -125,10 +135,16 @@ export const POP_MENU_SECTIONS: MenuSectionDef[] = [
       { id: "clientes", name: "Clientes", icon: Users },
       { id: "proveedores", name: "Proveedores", icon: Truck },
       { id: "gastos", name: "Gastos", icon: Receipt },
-      { id: "cuentas-corrientes", name: "Cuentas corrientes", icon: CreditCard },
+      {
+        id: "cuentas-corrientes",
+        name: "Cuentas corrientes",
+        tileLabel: "Corrientes",
+        icon: CreditCard,
+      },
       {
         id: "cuentas-bancarias",
         name: "Cuentas bancarias",
+        tileLabel: "Bancos",
         icon: Building2,
       },
     ],
@@ -140,6 +156,7 @@ export const POP_MENU_SECTIONS: MenuSectionDef[] = [
       {
         id: "resumen-estadistico",
         name: "Resumen estadístico",
+        tileLabel: "Resumen",
         icon: LayoutDashboard,
       },
       { id: "estadisticas", name: "Estadísticas", icon: PieChart },

@@ -321,6 +321,13 @@ function MenuMiniCard({
 }) {
   const Icon = item.icon
   const href = resolveMenuHref(item, popSlug)
+  const shortLabel = item.tileLabel ?? item.name
+  const fullLabel = item.name
+  const labelHoverSwap = shortLabel !== fullLabel
+
+  /** Altura fija del rótulo: caben 2 líneas sin crecer el botón; ancladas abajo suben en hover. */
+  const labelTileClass =
+    "text-pretty text-left text-xs font-semibold leading-snug tracking-tight text-white/92 sm:text-sm sm:leading-snug"
 
   return (
     <div className="relative h-full w-full rounded-2xl hover:z-20">
@@ -328,6 +335,7 @@ function MenuMiniCard({
         <button
           type="button"
           onClick={onNavigate}
+          title={labelHoverSwap ? fullLabel : undefined}
           className={cn(
             "group/menu-tile relative z-0 flex h-full min-h-[6.75rem] w-full flex-col overflow-hidden rounded-2xl border border-white/[0.09] bg-[#121816] p-2.5 text-left sm:min-h-[8rem] sm:p-3",
             "shadow-[0_10px_28px_-12px_rgba(0,0,0,0.55),inset_0_1px_0_0_rgba(255,255,255,0.05)]",
@@ -379,19 +387,52 @@ function MenuMiniCard({
             </div>
           </div>
 
-          <div className="relative z-[1] mt-auto min-h-0 w-full border-t border-white/[0.05] pt-2">
-            <p
-              className="text-pretty text-left text-xs font-semibold leading-snug tracking-tight text-white/92 sm:text-sm sm:leading-snug"
-              lang="es"
-            >
-              {item.name}
-            </p>
+          <div
+            className={cn(
+              "relative z-[1] mt-auto w-full pt-2 pb-1.5",
+              labelHoverSwap &&
+                "transition-transform duration-200 ease-out motion-reduce:transition-none group-hover/menu-tile:-translate-y-1 motion-reduce:group-hover/menu-tile:translate-y-0",
+            )}
+          >
+            {labelHoverSwap ? (
+              <div className="relative isolate h-[2.5rem] w-full sm:h-[2.75rem]">
+                <p
+                  className={cn(
+                    labelTileClass,
+                    "absolute bottom-0 left-0 right-0 transition-opacity duration-200 ease-out motion-reduce:transition-none",
+                    "group-hover/menu-tile:pointer-events-none group-hover/menu-tile:opacity-0",
+                    "motion-reduce:opacity-100 motion-reduce:group-hover/menu-tile:opacity-100",
+                  )}
+                  lang="es"
+                  aria-hidden
+                >
+                  {shortLabel}
+                </p>
+                <p
+                  className={cn(
+                    labelTileClass,
+                    "absolute bottom-0 left-0 right-0 opacity-0 transition-opacity duration-200 ease-out motion-reduce:transition-none",
+                    "group-hover/menu-tile:opacity-100 motion-reduce:hidden",
+                  )}
+                  lang="es"
+                  aria-hidden
+                >
+                  {fullLabel}
+                </p>
+              </div>
+            ) : (
+              <div className="relative h-[2.5rem] w-full sm:h-[2.75rem]">
+                <p className={cn(labelTileClass, "absolute bottom-0 left-0 right-0")} lang="es">
+                  {fullLabel}
+                </p>
+              </div>
+            )}
           </div>
 
           {href ? (
-            <span className="sr-only">Abrir {item.name}</span>
+            <span className="sr-only">Abrir {fullLabel}</span>
           ) : (
-            <span className="sr-only">{item.name} (próximamente)</span>
+            <span className="sr-only">{fullLabel} (próximamente)</span>
           )}
         </button>
 
@@ -598,9 +639,11 @@ export default function MenuPage() {
       if (!slide) return []
       const q = searchQuery.trim().toLowerCase()
       if (!q) return slide.items
-      return slide.items.filter((item) =>
-        item.name.toLowerCase().includes(q),
-      )
+      return slide.items.filter((item) => {
+        const n = item.name.toLowerCase()
+        const t = item.tileLabel?.toLowerCase() ?? ""
+        return n.includes(q) || (t !== "" && t.includes(q))
+      })
     },
     [menuSlides, searchQuery],
   )
