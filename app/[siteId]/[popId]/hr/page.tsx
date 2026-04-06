@@ -218,14 +218,14 @@ function HrPage() {
     }
     setPermModalRole(res.role)
     setPermModalList(res.permissions)
-    setPermModalSelected([...res.selectedPermissionIds])
+    setPermModalSelected([...res.selectedGrantKeys])
   }
 
-  const togglePermSelection = (permissionId: string) => {
+  const togglePermSelection = (grantKey: string) => {
     setPermModalSelected((prev) =>
-      prev.includes(permissionId)
-        ? prev.filter((x) => x !== permissionId)
-        : [...prev, permissionId],
+      prev.includes(grantKey)
+        ? prev.filter((x) => x !== grantKey)
+        : [...prev, grantKey],
     )
   }
 
@@ -797,9 +797,11 @@ function HrPage() {
               </p>
             ) : permissionsByResource.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No hay permisos definidos en el catálogo. Agregá filas en la tabla{" "}
-                <code className="rounded bg-muted px-1 font-mono text-xs">permissions</code>{" "}
-                en Supabase.
+                No hay permisos en el catálogo de la app (POP_PAGES). Revisá{" "}
+                <code className="rounded bg-muted px-1 font-mono text-xs">
+                  lib/popPageCrudConstants.ts
+                </code>
+                .
               </p>
             ) : (
               <div className="space-y-4">
@@ -811,17 +813,17 @@ function HrPage() {
                     <ul className="space-y-2">
                       {plist.map((p) => (
                         <li
-                          key={p.id}
+                          key={p.key}
                           className="flex items-start gap-3 rounded-lg border border-border/60 bg-secondary/30 px-3 py-2"
                         >
                           <Checkbox
-                            id={`perm-${p.id}`}
-                            checked={permModalSelected.includes(p.id)}
-                            onCheckedChange={() => togglePermSelection(p.id)}
+                            id={`perm-${p.key.replace(/:/g, "-")}`}
+                            checked={permModalSelected.includes(p.key)}
+                            onCheckedChange={() => togglePermSelection(p.key)}
                             className="mt-0.5"
                           />
                           <label
-                            htmlFor={`perm-${p.id}`}
+                            htmlFor={`perm-${p.key.replace(/:/g, "-")}`}
                             className="flex-1 cursor-pointer text-sm text-foreground"
                           >
                             <span className="font-medium">{p.action}</span>

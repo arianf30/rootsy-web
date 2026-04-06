@@ -10,6 +10,10 @@ import {
 } from "@/lib/popHelpers"
 import { popMenuHref } from "@/lib/popRoutes"
 import { loadPopPermissionsSnapshot } from "@/lib/popPermissionsServer"
+import {
+  buildHrPermissionCatalogRows,
+  type HrPermissionCatalogRow,
+} from "@/lib/hrPermissionCatalog"
 import { createClient } from "@/utils/supabase/server"
 
 export type PopRoleRow = {
@@ -43,12 +47,7 @@ export type PendingInviteRow = {
   expiresAt: string
 }
 
-export type PermissionCatalogRow = {
-  id: string
-  resource: string
-  action: string
-  description: string | null
-}
+export type PermissionCatalogRow = HrPermissionCatalogRow
 
 type RpcOkJson = { ok?: boolean; error?: string }
 
@@ -581,7 +580,7 @@ export async function getRolePermissionsEditorData(
       success: true
       role: { id: string; displayName: string; name: string }
       permissions: PermissionCatalogRow[]
-      selectedPermissionIds: string[]
+      selectedGrantKeys: string[]
     }
   | { success: false; error: string }
 > {
@@ -607,7 +606,7 @@ export async function getRolePermissionsEditorData(
 
   const { data: roleRow, error: roleErr } = await supabase
     .from("roles")
-    .select("id, name, display_name, pop_id")
+    .select("id, name, display_name, pop_id, permission_grants")
     .eq("id", roleId)
     .single()
 
@@ -622,35 +621,13 @@ export async function getRolePermissionsEditorData(
     }
   }
 
-  const { data: permRows, error: permErr } = await supabase
-    .from("permissions")
-    .select("id, resource, action, description")
-    .order("resource", { ascending: true })
-    .order("action", { ascending: true })
-
-  if (permErr) {
-    return { success: false, error: permErr.message }
-  }
-
-  const { data: rpRows, error: rpErr } = await supabase
-    .from("role_permissions")
-    .select("permission_id")
-    .eq("role_id", roleId)
-
-  if (rpErr) {
-    return { success: false, error: rpErr.message }
-  }
-
-  const permissions: PermissionCatalogRow[] = (permRows || []).map((p) => ({
-    id: p.id,
-    resource: p.resource,
-    action: p.action,
-    description: p.description ?? null,
-  }))
-
-  const selectedPermissionIds = (rpRows || []).map((r) =>
-    String(r.permission_id),
-  )
+  const catalog = buildHrPermissionCatalogRows()
+  const catalogKeys = new Set(catalog.map((c) => c.key))
+  const raw = roleRow.permission_grants
+  const fromRole = Array.isArray(raw)
+    ? raw.filter((x): x is string => typeof x === "string")
+    : []
+  const selectedGrantKeys = fromRole.filter((k) => catalogKeys.has(k))
 
   return {
     success: true,
@@ -659,15 +636,15 @@ export async function getRolePermissionsEditorData(
       displayName: roleRow.display_name,
       name: roleRow.name,
     },
-    permissions,
-    selectedPermissionIds,
+    permissions: catalog,
+    selectedGrantKeys,
   }
 }
 
 export async function savePopRolePermissions(
   popId: string,
   roleId: string,
-  permissionIds: string[],
+  grantKeys: string[],
 ): Promise<{ success: true } | { success: false; error: string }> {
   const access = await validatePopAccess(popId)
   if (!access.hasAccess || !access.isActive) {
@@ -686,12 +663,12 @@ export async function savePopRolePermissions(
     return { success: false, error: "Sin permiso." }
   }
 
-  const ids = [...new Set(permissionIds.map((x) => x.trim()).filter(Boolean))]
+  const keys = [...new Set(grantKeys.map((x) => x.trim()).filter(Boolean))]
 
   const { data, error } = await supabase.rpc("hr_pop_owner_sync_role_permissions", {
     p_pop_id: popId,
     p_role_id: roleId,
-    p_permission_ids: ids,
+    p_permission_grants: keys,
   })
 
   if (error) {

@@ -156,7 +156,7 @@ export function allUniquePermissionKeys(): string[] {
   for (const k of POP_PAGE_KEYS) {
     for (const p of permissionKeysForPage(k)) set.add(p)
   }
-  return [...set]
+  return [...set].sort()
 }
 
 export function permissionByLabel(
