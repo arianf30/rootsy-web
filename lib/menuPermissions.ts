@@ -13,6 +13,9 @@ export function getMenuResourceAction(
   if (menuLink === "hr") return { resource: "hr", action: "read" }
   if (menuLink === "articles") return { resource: "articles", action: "read" }
   if (menuLink === "clients") return { resource: "clients", action: "read" }
+  if (menuLink === "suppliers")
+    return { resource: "suppliers", action: "read" }
+  if (menuLink === "invoices") return { resource: "invoices", action: "read" }
   if (menuLink === "payment-methods")
     return { resource: "payment_methods", action: "read" }
   if (menuLink === "printers") return { resource: "printers", action: "read" }

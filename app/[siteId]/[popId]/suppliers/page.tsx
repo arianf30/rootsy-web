@@ -1,13 +1,13 @@
 "use client"
 
 import {
-  createPopClient,
-  deletePopClient,
-  getPopClientsTable,
-  updatePopClient,
-  type ClientTableRow,
-  type UpsertPopClientInput,
-} from "@/app/[siteId]/[popId]/clients/actions"
+  createPopSupplier,
+  deletePopSupplier,
+  getPopSuppliersTable,
+  updatePopSupplier,
+  type SupplierTableRow,
+  type UpsertPopSupplierInput,
+} from "@/app/[siteId]/[popId]/suppliers/actions"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -40,7 +40,7 @@ import {
   Maximize2,
   Minimize2,
   Plus,
-  Users,
+  Truck,
   Wifi,
   WifiOff,
 } from "lucide-react"
@@ -55,11 +55,11 @@ import {
   type FormEvent,
 } from "react"
 
-function emptyForm(): UpsertPopClientInput {
+function emptyForm(): UpsertPopSupplierInput {
   return { name: "", email: "", phone: "", taxId: "", notes: "" }
 }
 
-function ClientsPage() {
+function SuppliersPage() {
   const router = useRouter()
   const routerRef = useRef(router)
   routerRef.current = router
@@ -69,7 +69,7 @@ function ClientsPage() {
   const popId = typeof params?.popId === "string" ? params.popId : undefined
 
   const [popName, setPopName] = useState("")
-  const [rows, setRows] = useState<ClientTableRow[]>([])
+  const [rows, setRows] = useState<SupplierTableRow[]>([])
   const [canCreate, setCanCreate] = useState(false)
   const [canUpdate, setCanUpdate] = useState(false)
   const [canDelete, setCanDelete] = useState(false)
@@ -81,12 +81,12 @@ function ClientsPage() {
   const [createBanner, setCreateBanner] = useState<string | null>(null)
   const [createForm, setCreateForm] = useState(emptyForm)
 
-  const [editRow, setEditRow] = useState<ClientTableRow | null>(null)
+  const [editRow, setEditRow] = useState<SupplierTableRow | null>(null)
   const [editSaving, setEditSaving] = useState(false)
   const [editBanner, setEditBanner] = useState<string | null>(null)
   const [editForm, setEditForm] = useState(emptyForm)
 
-  const [deleteRow, setDeleteRow] = useState<ClientTableRow | null>(null)
+  const [deleteRow, setDeleteRow] = useState<SupplierTableRow | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
 
   const [isOnline, setIsOnline] = useState(true)
@@ -101,19 +101,20 @@ function ClientsPage() {
 
   const load = useCallback(async () => {
     if (!popId || !siteId) return
-    const res = await getPopClientsTable(popId)
+    const res = await getPopSuppliersTable(popId)
     if (!res.success) {
       setError(res.error || "Error")
       setRows([])
       setCanCreate(false)
       setCanUpdate(false)
       setCanDelete(false)
+      setPopName(res.popName ?? "")
       if (res.redirect) {
         setTimeout(() => routerRef.current.push(res.redirect!), 1200)
       }
       return
     }
-    setRows(res.clients)
+    setRows(res.suppliers)
     setPopName(res.popName)
     setCanCreate(res.canCreate)
     setCanUpdate(res.canUpdate)
@@ -124,7 +125,7 @@ function ClientsPage() {
   useEffect(() => {
     if (!popId || !siteId) {
       setLoading(false)
-      setError("Store ID not found")
+      setError("Punto de venta no encontrado")
       return
     }
     let cancelled = false
@@ -134,7 +135,7 @@ function ClientsPage() {
       try {
         await load()
       } catch {
-        if (!cancelled) setError("Unexpected error")
+        if (!cancelled) setError("Error inesperado")
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -196,7 +197,7 @@ function ClientsPage() {
     if (!popId || !siteId) return
     setCreateSaving(true)
     setCreateBanner(null)
-    const res = await createPopClient(popId, createForm)
+    const res = await createPopSupplier(popId, createForm)
     setCreateSaving(false)
     if (!res.success) {
       setCreateBanner(res.error)
@@ -206,7 +207,7 @@ function ClientsPage() {
     await load()
   }
 
-  const openEdit = (row: ClientTableRow) => {
+  const openEdit = (row: SupplierTableRow) => {
     setEditBanner(null)
     setEditRow(row)
     setEditForm({
@@ -223,7 +224,7 @@ function ClientsPage() {
     if (!popId || !siteId || !editRow) return
     setEditSaving(true)
     setEditBanner(null)
-    const res = await updatePopClient(popId, editRow.id, editForm)
+    const res = await updatePopSupplier(popId, editRow.id, editForm)
     setEditSaving(false)
     if (!res.success) {
       setEditBanner(res.error)
@@ -236,7 +237,7 @@ function ClientsPage() {
   const submitDelete = async () => {
     if (!popId || !siteId || !deleteRow) return
     setDeleteBusy(true)
-    const res = await deletePopClient(popId, deleteRow.id)
+    const res = await deletePopSupplier(popId, deleteRow.id)
     setDeleteBusy(false)
     if (!res.success) {
       setDeleteRow(null)
@@ -249,7 +250,7 @@ function ClientsPage() {
   const headerUserName = useMemo(() => {
     const meta = user?.user_metadata?.full_name
     if (typeof meta === "string" && meta.trim()) return meta.trim()
-    return user?.email?.split("@")[0] || "User"
+    return user?.email?.split("@")[0] || "Usuario"
   }, [user?.email, user?.user_metadata?.full_name])
 
   const userAvatarSrc =
@@ -263,7 +264,7 @@ function ClientsPage() {
   if (!popId || !siteId) {
     return (
       <div className="rootsy-app-light min-h-screen bg-background p-10 text-foreground">
-        <p className="text-sm">Store ID not found</p>
+        <p className="text-sm">Punto de venta no encontrado</p>
       </div>
     )
   }
@@ -285,7 +286,7 @@ function ClientsPage() {
               <Link
                 href={popMenuHref(siteId, popId)}
                 className="group inline-flex size-10 items-center justify-center rounded-xl border border-foreground/10 bg-secondary text-foreground/70 transition-all hover:border-primary/25 hover:bg-muted hover:text-foreground"
-                aria-label="Back to menu"
+                aria-label="Volver al menú"
               >
                 <ArrowLeft className="size-5 transition-transform group-hover:-translate-x-0.5" />
               </Link>
@@ -307,9 +308,9 @@ function ClientsPage() {
             <div className="flex items-center gap-2">
               <h1 className="flex items-center gap-2 text-[1.65rem] font-black tracking-tight text-foreground">
                 <span className="inline-flex size-9 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                  <Users className="size-5" aria-hidden />
+                  <Truck className="size-5" aria-hidden />
                 </span>
-                Clients
+                Proveedores
               </h1>
               <div
                 className={cn(
@@ -337,14 +338,16 @@ function ClientsPage() {
                   onClick={() => openCreate()}
                 >
                   <Plus className="size-4" aria-hidden />
-                  <span className="hidden sm:inline">New client</span>
+                  <span className="hidden sm:inline">Nuevo proveedor</span>
                 </Button>
               ) : null}
               <button
                 type="button"
                 onClick={() => void toggleFullscreen()}
                 className="group inline-flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                aria-label={
+                  isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"
+                }
               >
                 {isFullscreen ? (
                   <Minimize2 className="size-4.5" />
@@ -366,7 +369,7 @@ function ClientsPage() {
                   </span>
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-meadow">
                     <Leaf className="size-3" aria-hidden />
-                    CRM
+                    Compras
                   </span>
                 </div>
               </div>
@@ -376,7 +379,7 @@ function ClientsPage() {
 
         <main className="relative z-10 mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
           {loading ? (
-            <p className="text-sm text-muted-foreground">Loading clients…</p>
+            <p className="text-sm text-muted-foreground">Cargando proveedores…</p>
           ) : error ? (
             <div className="rounded-2xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm text-destructive">
               {error}
@@ -385,11 +388,11 @@ function ClientsPage() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">
-                  Customer directory
+                  Directorio de proveedores
                 </h2>
                 <p className="max-w-xl text-sm text-muted-foreground">
-                  Manage contact and tax data for this store. Changes follow
-                  your role and RLS.
+                  Datos de contacto, CUIT y notas para este punto de venta. Los
+                  cambios respetan tu rol y las políticas RLS.
                 </p>
               </div>
 
@@ -398,23 +401,23 @@ function ClientsPage() {
                   <TableHeader>
                     <TableRow className="border-border bg-muted/40 hover:bg-muted/40">
                       <TableHead className="font-semibold text-foreground">
-                        Name
+                        Nombre
                       </TableHead>
                       <TableHead className="font-semibold text-foreground">
                         Email
                       </TableHead>
                       <TableHead className="font-semibold text-foreground">
-                        Phone
+                        Teléfono
                       </TableHead>
                       <TableHead className="font-semibold text-foreground">
-                        Tax ID
+                        CUIT / ID fiscal
                       </TableHead>
                       <TableHead className="font-semibold text-foreground">
-                        Notes
+                        Notas
                       </TableHead>
                       {canUpdate || canDelete ? (
                         <TableHead className="text-right font-semibold text-foreground">
-                          Actions
+                          Acciones
                         </TableHead>
                       ) : null}
                     </TableRow>
@@ -426,7 +429,7 @@ function ClientsPage() {
                           colSpan={emptyCols}
                           className="py-12 text-center text-muted-foreground"
                         >
-                          No clients yet or no read access from the server.
+                          No hay proveedores aún o no hay permiso de lectura.
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -464,7 +467,7 @@ function ClientsPage() {
                                     className="text-primary hover:bg-primary/10 hover:text-forest"
                                     onClick={() => openEdit(r)}
                                   >
-                                    Edit
+                                    Editar
                                   </Button>
                                 ) : null}
                                 {canDelete ? (
@@ -475,7 +478,7 @@ function ClientsPage() {
                                     className="text-destructive hover:bg-destructive/10"
                                     onClick={() => setDeleteRow(r)}
                                   >
-                                    Delete
+                                    Eliminar
                                   </Button>
                                 ) : null}
                               </div>
@@ -499,7 +502,7 @@ function ClientsPage() {
           className="max-h-[min(90vh,640px)] overflow-y-auto border-border bg-card text-foreground sm:max-w-md"
         >
           <DialogHeader>
-            <DialogTitle>New client</DialogTitle>
+            <DialogTitle>Nuevo proveedor</DialogTitle>
           </DialogHeader>
           {createBanner ? (
             <p className="rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -508,9 +511,9 @@ function ClientsPage() {
           ) : null}
           <form className="space-y-4" onSubmit={(e) => void submitCreate(e)}>
             <div className="space-y-2">
-              <Label htmlFor="cl-name">Name</Label>
+              <Label htmlFor="sp-name">Nombre</Label>
               <Input
-                id="cl-name"
+                id="sp-name"
                 value={createForm.name}
                 onChange={(e) =>
                   setCreateForm((f) => ({ ...f, name: e.target.value }))
@@ -520,9 +523,9 @@ function ClientsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="cl-email">Email</Label>
+              <Label htmlFor="sp-email">Email</Label>
               <Input
-                id="cl-email"
+                id="sp-email"
                 type="email"
                 value={createForm.email}
                 onChange={(e) =>
@@ -532,9 +535,9 @@ function ClientsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="cl-phone">Phone</Label>
+              <Label htmlFor="sp-phone">Teléfono</Label>
               <Input
-                id="cl-phone"
+                id="sp-phone"
                 value={createForm.phone}
                 onChange={(e) =>
                   setCreateForm((f) => ({ ...f, phone: e.target.value }))
@@ -543,9 +546,9 @@ function ClientsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="cl-tax">CUIT / DNI</Label>
+              <Label htmlFor="sp-tax">CUIT / ID fiscal</Label>
               <Input
-                id="cl-tax"
+                id="sp-tax"
                 value={createForm.taxId}
                 onChange={(e) =>
                   setCreateForm((f) => ({ ...f, taxId: e.target.value }))
@@ -563,9 +566,9 @@ function ClientsPage() {
               ) : null}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="cl-notes">Notes</Label>
+              <Label htmlFor="sp-notes">Notas</Label>
               <Textarea
-                id="cl-notes"
+                id="sp-notes"
                 rows={3}
                 value={createForm.notes}
                 onChange={(e) =>
@@ -576,10 +579,10 @@ function ClientsPage() {
             </div>
             <DialogFooter className="gap-2 sm:gap-0">
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
-                Cancel
+                Cancelar
               </Button>
               <Button type="submit" disabled={createSaving}>
-                {createSaving ? "Saving…" : "Create"}
+                {createSaving ? "Guardando…" : "Crear"}
               </Button>
             </DialogFooter>
           </form>
@@ -593,7 +596,7 @@ function ClientsPage() {
           className="max-h-[min(90vh,640px)] overflow-y-auto border-border bg-card text-foreground sm:max-w-md"
         >
           <DialogHeader>
-            <DialogTitle>Edit client</DialogTitle>
+            <DialogTitle>Editar proveedor</DialogTitle>
           </DialogHeader>
           {editBanner ? (
             <p className="rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -602,9 +605,9 @@ function ClientsPage() {
           ) : null}
           <form className="space-y-4" onSubmit={(e) => void submitEdit(e)}>
             <div className="space-y-2">
-              <Label htmlFor="e-cl-name">Name</Label>
+              <Label htmlFor="e-sp-name">Nombre</Label>
               <Input
-                id="e-cl-name"
+                id="e-sp-name"
                 value={editForm.name}
                 onChange={(e) =>
                   setEditForm((f) => ({ ...f, name: e.target.value }))
@@ -614,9 +617,9 @@ function ClientsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="e-cl-email">Email</Label>
+              <Label htmlFor="e-sp-email">Email</Label>
               <Input
-                id="e-cl-email"
+                id="e-sp-email"
                 type="email"
                 value={editForm.email}
                 onChange={(e) =>
@@ -626,9 +629,9 @@ function ClientsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="e-cl-phone">Phone</Label>
+              <Label htmlFor="e-sp-phone">Teléfono</Label>
               <Input
-                id="e-cl-phone"
+                id="e-sp-phone"
                 value={editForm.phone}
                 onChange={(e) =>
                   setEditForm((f) => ({ ...f, phone: e.target.value }))
@@ -637,9 +640,9 @@ function ClientsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="e-cl-tax">CUIT / DNI</Label>
+              <Label htmlFor="e-sp-tax">CUIT / ID fiscal</Label>
               <Input
-                id="e-cl-tax"
+                id="e-sp-tax"
                 value={editForm.taxId}
                 onChange={(e) =>
                   setEditForm((f) => ({ ...f, taxId: e.target.value }))
@@ -657,9 +660,9 @@ function ClientsPage() {
               ) : null}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="e-cl-notes">Notes</Label>
+              <Label htmlFor="e-sp-notes">Notas</Label>
               <Textarea
-                id="e-cl-notes"
+                id="e-sp-notes"
                 rows={3}
                 value={editForm.notes}
                 onChange={(e) =>
@@ -670,10 +673,10 @@ function ClientsPage() {
             </div>
             <DialogFooter className="gap-2 sm:gap-0">
               <Button type="button" variant="outline" onClick={() => setEditRow(null)}>
-                Cancel
+                Cancelar
               </Button>
               <Button type="submit" disabled={editSaving}>
-                {editSaving ? "Saving…" : "Save"}
+                {editSaving ? "Guardando…" : "Guardar"}
               </Button>
             </DialogFooter>
           </form>
@@ -687,18 +690,18 @@ function ClientsPage() {
           className="border-border bg-card text-foreground sm:max-w-md"
         >
           <DialogHeader>
-            <DialogTitle>Delete client?</DialogTitle>
+            <DialogTitle>¿Eliminar proveedor?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This will remove{" "}
+            Se va a quitar{" "}
             <strong className="text-foreground">
-              {deleteRow?.name || "this client"}
+              {deleteRow?.name || "este proveedor"}
             </strong>{" "}
-            from this store.
+            de este punto de venta.
           </p>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={() => setDeleteRow(null)}>
-              Cancel
+              Cancelar
             </Button>
             <Button
               type="button"
@@ -706,7 +709,7 @@ function ClientsPage() {
               disabled={deleteBusy}
               onClick={() => void submitDelete()}
             >
-              {deleteBusy ? "Deleting…" : "Delete"}
+              {deleteBusy ? "Eliminando…" : "Eliminar"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -715,4 +718,4 @@ function ClientsPage() {
   )
 }
 
-export default withAuth(ClientsPage)
+export default withAuth(SuppliersPage)

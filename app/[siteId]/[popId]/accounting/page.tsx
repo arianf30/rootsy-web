@@ -87,6 +87,9 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
   payment: "Cobro / pago",
   opening: "Apertura",
   closing: "Cierre",
+  cash_register_close: "Cierre de caja (arqueo)",
+  inventory_adjustment: "Ajuste de inventario",
+  inventory_initial: "Stock inicial",
 }
 
 function formatSourceType(s: string): string {

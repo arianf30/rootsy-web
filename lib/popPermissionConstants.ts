@@ -1,4 +1,7 @@
 export const POP_PERMS = {
+  SETTINGS_READ: { resource: "settings", action: "read" },
+  SETTINGS_UPDATE: { resource: "settings", action: "update" },
+
   HR_READ: { resource: "hr", action: "read" },
   SALE_READ: { resource: "sale", action: "read" },
   SALE_CREATE: { resource: "sale", action: "create" },
@@ -22,6 +25,16 @@ export const POP_PERMS = {
   CLIENT_CREATE: { resource: "clients", action: "create" },
   CLIENT_UPDATE: { resource: "clients", action: "update" },
   CLIENT_DELETE: { resource: "clients", action: "delete" },
+
+  SUPPLIER_READ: { resource: "suppliers", action: "read" },
+  SUPPLIER_CREATE: { resource: "suppliers", action: "create" },
+  SUPPLIER_UPDATE: { resource: "suppliers", action: "update" },
+  SUPPLIER_DELETE: { resource: "suppliers", action: "delete" },
+
+  INVOICES_READ: { resource: "invoices", action: "read" },
+  INVOICES_CREATE: { resource: "invoices", action: "create" },
+  INVOICES_UPDATE: { resource: "invoices", action: "update" },
+  INVOICES_DELETE: { resource: "invoices", action: "delete" },
 
   PAYMENT_METHOD_READ: { resource: "payment_methods", action: "read" },
   PAYMENT_METHOD_CREATE: { resource: "payment_methods", action: "create" },

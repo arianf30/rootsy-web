@@ -27,6 +27,7 @@ export type SaleCatalogArticle = {
 export type SaleCatalogClient = {
   id: string
   name: string
+  taxId: string | null
 }
 
 export type SaleCatalogPaymentMethod = {
@@ -166,7 +167,7 @@ export async function getSaleCatalog(popId: string): Promise<
     if (canReadClients) {
       const { data: clRows, error: clErr } = await supabase
         .from("clients")
-        .select("id, name")
+        .select("id, name, tax_id")
         .eq("pop_id", popId)
         .order("name", { ascending: true })
       if (clErr) {
@@ -175,6 +176,7 @@ export async function getSaleCatalog(popId: string): Promise<
       clients = (clRows || []).map((c) => ({
         id: String(c.id),
         name: String(c.name ?? ""),
+        taxId: c.tax_id != null ? String(c.tax_id) : null,
       }))
     }
 

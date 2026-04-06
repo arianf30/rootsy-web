@@ -34,6 +34,7 @@ import {
   CircleCheck,
   CircleX,
   LayoutGrid,
+  Loader2,
   Maximize2,
   Minimize2,
   Minus,
@@ -50,6 +51,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react"
+import { usePadronAutofillRazonSocial } from "@/hooks/usePadronAutofillRazonSocial"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -368,7 +370,12 @@ function SalePage() {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<{
     id: string
     name: string
+    taxId: string | null
   } | null>(null)
+  const [fiscalDocVenta, setFiscalDocVenta] = useState("")
+  const ventaPadron = usePadronAutofillRazonSocial(popId, fiscalDocVenta, {
+    enabled: Boolean(popId),
+  })
   const [clienteModalAbierto, setClienteModalAbierto] = useState(false)
   const [busquedaClienteModal, setBusquedaClienteModal] = useState("")
   const [comprobante, setComprobante] = useState<string | null>(null)
@@ -557,6 +564,7 @@ function SalePage() {
   const limpiarVenta = useCallback(() => {
     setCarrito([])
     setClienteSeleccionado(null)
+    setFiscalDocVenta("")
     setComprobante(null)
     setModoDescuento("porcentaje")
     setValorDescuentoPorcentaje(0)
@@ -579,6 +587,21 @@ function SalePage() {
     setVentaError(null)
     setVentaSubmitting(true)
     try {
+      const hasFiscalOverride =
+        Boolean(fiscalDocVenta.trim()) ||
+        Boolean(ventaPadron.razonSocial.trim())
+      const fiscalCustomer = hasFiscalOverride
+        ? {
+            name:
+              ventaPadron.razonSocial.trim() ||
+              clienteSeleccionado?.name ||
+              "",
+            taxId:
+              fiscalDocVenta.trim() ||
+              clienteSeleccionado?.taxId ||
+              null,
+          }
+        : null
       const res = await completeSale(popId, {
         siteId,
         lines: carrito.map((i) => ({
@@ -594,6 +617,7 @@ function SalePage() {
         valorDescuentoPorcentaje,
         valorDescuentoFijo,
         invoiceTypeLabel: comprobante,
+        fiscalCustomer,
       })
       if (!res.success) {
         setVentaError(res.error)
@@ -617,6 +641,8 @@ function SalePage() {
     valorDescuentoPorcentaje,
     valorDescuentoFijo,
     comprobante,
+    fiscalDocVenta,
+    ventaPadron.razonSocial,
     limpiarVenta,
   ])
 
@@ -727,7 +753,12 @@ function SalePage() {
   }
 
   const seleccionarCliente = (c: SaleCatalogClient) => {
-    setClienteSeleccionado({ id: c.id, name: c.name })
+    setClienteSeleccionado({
+      id: c.id,
+      name: c.name,
+      taxId: c.taxId,
+    })
+    setFiscalDocVenta(c.taxId ?? "")
     setClienteModalAbierto(false)
   }
 
@@ -1852,6 +1883,39 @@ function SalePage() {
                 </button>
               ) : null}
             </div>
+            <div className="mb-3 rounded-xl border border-border/50 bg-muted/15 p-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                CUIT / DNI (padrón AFIP)
+              </p>
+              <Input
+                value={fiscalDocVenta}
+                onChange={(e) => setFiscalDocVenta(e.target.value)}
+                placeholder="Ej. 20-12345678-9 o DNI"
+                className="h-10 rounded-lg"
+                autoComplete="off"
+              />
+              <div className="mt-2 flex min-h-6 items-center gap-2 text-sm">
+                {ventaPadron.busy ? (
+                  <>
+                    <Loader2
+                      className="size-4 shrink-0 animate-spin text-primary"
+                      aria-hidden
+                    />
+                    <span className="text-muted-foreground">Consultando…</span>
+                  </>
+                ) : ventaPadron.error ? (
+                  <span className="text-destructive">{ventaPadron.error}</span>
+                ) : ventaPadron.razonSocial ? (
+                  <span className="font-medium text-foreground">
+                    {ventaPadron.razonSocial}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    La razón social aparece al validar el documento.
+                  </span>
+                )}
+              </div>
+            </div>
             <ul
               className="game-scroll max-h-[min(50vh,16rem)] space-y-2 overflow-y-auto rounded-xl border border-border/40 bg-muted/20 p-2 pr-1"
               role="listbox"
@@ -1880,7 +1944,14 @@ function SalePage() {
                         )}
                       >
                         <User className="size-5 shrink-0 text-primary" aria-hidden />
-                        <span className="min-w-0 font-medium">{c.name}</span>
+                        <span className="min-w-0">
+                          <span className="block font-medium">{c.name}</span>
+                          {c.taxId ? (
+                            <span className="mt-0.5 block text-xs text-muted-foreground">
+                              {c.taxId}
+                            </span>
+                          ) : null}
+                        </span>
                       </button>
                     </li>
                   )
@@ -1896,6 +1967,7 @@ function SalePage() {
                 className={ventaDialogGhostBtn}
                 onClick={() => {
                   setClienteSeleccionado(null)
+                  setFiscalDocVenta("")
                   setClienteModalAbierto(false)
                 }}
               >

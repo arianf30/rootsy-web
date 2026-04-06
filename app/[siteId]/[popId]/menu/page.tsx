@@ -50,6 +50,8 @@ import {
 export type MenuItemLink =
   | "sale"
   | "operations"
+  | "suppliers"
+  | "invoices"
   | "settings"
   | "hr"
   | "articles"
@@ -84,7 +86,7 @@ const menuSectionsRaw: Record<string, MenuSectionDef> = {
       { name: "Fabricación", icon: Factory, link: "section" },
       { name: "Stock", icon: Package, badge: "3", link: "articles" },
       { name: "Clientes", icon: Users, link: "clients" },
-      { name: "Proveedores", icon: Truck, link: "section" },
+      { name: "Proveedores", icon: Truck, link: "suppliers" },
       { name: "Cuentas Ctes", icon: CreditCard, link: "section" },
       { name: "Promociones", icon: Sparkles, badge: "5", link: "section" },
       { name: "Recetas", icon: BookOpen, link: "section" },
@@ -100,7 +102,7 @@ const menuSectionsRaw: Record<string, MenuSectionDef> = {
       { name: "Movimientos", icon: ArrowLeftRight, link: "section" },
       { name: "Inventario", icon: ClipboardList, link: "inventory" },
       { name: "Gastos", icon: Receipt, link: "section" },
-      { name: "Facturas", icon: FileBarChart, badge: "2", link: "section" },
+      { name: "Facturas", icon: FileBarChart, link: "invoices" },
       { name: "Reportes", icon: FileCheck, link: "section" },
       { name: "Cheques", icon: Wallet, link: "section" },
       { name: "Órdenes", icon: FileText, link: "section" },

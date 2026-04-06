@@ -9,6 +9,7 @@ import {
   getCashRegistersPageData,
   openCashSession,
   updateCashRegister,
+  uploadCashRegisterArcaCertificates,
   type CashRegisterRow,
   type CashRegisterSummaryData,
   type ClosingSnapshot,
@@ -82,6 +83,14 @@ function shortUserId(id: string | null) {
   return id.length > 14 ? `${id.slice(0, 8)}…${id.slice(-4)}` : id
 }
 
+function sessionOpenedLabel(
+  sessionId: string,
+  sessions: { id: string; openedAt: string }[],
+): string {
+  const s = sessions.find((x) => x.id === sessionId)
+  return s ? formatDateTime(s.openedAt) : shortUserId(sessionId)
+}
+
 const dialogConsoleClass =
   "border border-cyan-500/25 bg-zinc-950/98 text-zinc-100 shadow-[0_0_80px_-12px_rgba(34,211,238,0.45),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-2xl"
 
@@ -128,6 +137,10 @@ function CashRegistersPage() {
   const [editName, setEditName] = useState("")
   const [editSort, setEditSort] = useState(0)
   const [editActive, setEditActive] = useState(true)
+  const [editArcaPtoVta, setEditArcaPtoVta] = useState("")
+  const [editArcaExpiresAt, setEditArcaExpiresAt] = useState("")
+  const editCrtRef = useRef<HTMLInputElement>(null)
+  const editKeyRef = useRef<HTMLInputElement>(null)
 
   const [deleteRow, setDeleteRow] = useState<CashRegisterRow | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
@@ -268,6 +281,8 @@ function CashRegistersPage() {
     setEditName(r.name)
     setEditSort(r.sortOrder)
     setEditActive(r.isActive)
+    setEditArcaPtoVta(r.arcaPtoVta != null ? String(r.arcaPtoVta) : "")
+    setEditArcaExpiresAt(r.arcaCertificateExpiresAt ?? "")
   }
 
   const submitEdit = async (e: FormEvent) => {
@@ -275,10 +290,48 @@ function CashRegistersPage() {
     if (!popId || !siteId || !editRow) return
     setEditSaving(true)
     setEditBanner(null)
+    const ptoRaw = editArcaPtoVta.trim()
+    const ptoParsed = ptoRaw === "" ? null : Number(ptoRaw)
+    if (
+      ptoParsed != null &&
+      (!Number.isFinite(ptoParsed) ||
+        ptoParsed < 0 ||
+        ptoParsed > 99999)
+    ) {
+      setEditBanner("Punto de venta inválido (0–99999 o vacío).")
+      setEditSaving(false)
+      return
+    }
+    const crt = editCrtRef.current?.files?.[0]
+    const key = editKeyRef.current?.files?.[0]
+    if ((crt && !key) || (!crt && key)) {
+      setEditBanner("Subí ambos archivos (.crt y .key) o ninguno.")
+      setEditSaving(false)
+      return
+    }
+    if (crt && key) {
+      const fd = new FormData()
+      fd.append("crt", crt)
+      fd.append("key", key)
+      const exp = editArcaExpiresAt.trim().slice(0, 10)
+      if (exp.length > 0) fd.append("expiresAt", exp)
+      const up = await uploadCashRegisterArcaCertificates(popId, editRow.id, fd)
+      if (!up.success) {
+        setEditBanner(up.error)
+        setEditSaving(false)
+        return
+      }
+      if (editCrtRef.current) editCrtRef.current.value = ""
+      if (editKeyRef.current) editKeyRef.current.value = ""
+    }
     const res = await updateCashRegister(popId, editRow.id, {
       name: editName,
       sortOrder: editSort,
       isActive: editActive,
+      arcaPtoVta: ptoParsed,
+      arcaCertificateSecretName: editRow.arcaCertificateSecretName ?? null,
+      arcaCertificateLastFour: editRow.arcaCertificateLastFour ?? null,
+      arcaCertificateExpiresAt: editArcaExpiresAt.trim().slice(0, 10) || null,
     })
     setEditSaving(false)
     if (!res.success) {
@@ -670,22 +723,140 @@ function CashRegistersPage() {
 
                         {r.openSessionId ? (
                           <div className="space-y-4">
-                            <div className="relative overflow-hidden rounded-lg border border-cyan-500/25 bg-black/70 px-4 py-4 shadow-[inset_0_2px_32px_rgba(34,211,238,0.07)]">
-                              <div className="mb-1 flex items-center justify-between">
-                                <span className={labelClass}>Drawer display</span>
-                                <span className="font-mono text-[10px] text-cyan-600/80">
-                                  LIVE
+                            {r.openSessionTotals ? (
+                              <>
+                                <div className="relative overflow-hidden rounded-lg border border-cyan-500/25 bg-black/70 px-4 py-4 shadow-[inset_0_2px_32px_rgba(34,211,238,0.07)]">
+                                  <div className="mb-2 flex items-center justify-between">
+                                    <span className={labelClass}>
+                                      Efectivo teórico en cajón
+                                    </span>
+                                    <span className="font-mono text-[10px] text-cyan-600/80">
+                                      EN VIVO
+                                    </span>
+                                  </div>
+                                  <div className="font-mono text-3xl font-light tabular-nums tracking-wide text-cyan-300 [text-shadow:0_0_24px_rgba(34,211,238,0.35)]">
+                                    {formatMoney(
+                                      r.openSessionTotals.efectivoTeoricoEnCajon,
+                                    )}
+                                  </div>
+                                  <p className="mt-2 font-mono text-[10px] leading-relaxed text-zinc-500">
+                                    Apertura + ventas en efectivo + ingresos al
+                                    cajón − retiros
+                                  </p>
+                                  <div className="mt-3 grid gap-2 border-t border-white/[0.06] pt-3 font-mono text-[11px] text-zinc-400 sm:grid-cols-2">
+                                    <div>
+                                      <span className="text-zinc-600">
+                                        Apertura{" "}
+                                      </span>
+                                      <span className="tabular-nums text-zinc-300">
+                                        {formatMoney(
+                                          r.openSessionTotals.openingCash,
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-zinc-600">
+                                        + Ventas efectivo{" "}
+                                      </span>
+                                      <span className="tabular-nums text-emerald-400/90">
+                                        {formatMoney(
+                                          r.openSessionTotals.ventasEfectivo,
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-zinc-600">
+                                        + Ingresos cajón{" "}
+                                      </span>
+                                      <span className="tabular-nums text-emerald-400/90">
+                                        {formatMoney(
+                                          r.openSessionTotals.ingresosCajon,
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-zinc-600">
+                                        − Retiros{" "}
+                                      </span>
+                                      <span className="tabular-nums text-rose-400/90">
+                                        {formatMoney(
+                                          r.openSessionTotals.egresosCajon,
+                                        )}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                {r.openSessionTotals.totalCobradoTurno !=
+                                null ? (
+                                  <>
+                                    <div className="rounded-lg border border-violet-500/25 bg-violet-950/25 px-4 py-4 shadow-[inset_0_2px_24px_rgba(139,92,246,0.08)]">
+                                      <span className={labelClass}>
+                                        Total cobrado en el turno
+                                      </span>
+                                      <p className="mt-0.5 text-[11px] text-zinc-500">
+                                        Suma de ventas completadas (todas las
+                                        formas de pago en esta caja)
+                                      </p>
+                                      <div className="mt-2 font-mono text-3xl font-light tabular-nums tracking-wide text-violet-200">
+                                        {formatMoney(
+                                          r.openSessionTotals.totalCobradoTurno,
+                                        )}
+                                      </div>
+                                    </div>
+                                    {r.openSessionTotals.cobrosPorMedio &&
+                                    r.openSessionTotals.cobrosPorMedio.length >
+                                      0 ? (
+                                      <div className="rounded-lg border border-white/[0.08] bg-black/50 px-3 py-3">
+                                        <span className={labelClass}>
+                                          Cobros por medio de pago (turno)
+                                        </span>
+                                        <ul className="mt-2 max-h-40 space-y-1.5 overflow-y-auto font-mono text-xs">
+                                          {r.openSessionTotals.cobrosPorMedio.map(
+                                            (row, idx) => (
+                                              <li
+                                                key={`${row.name}-${idx}`}
+                                                className="flex items-baseline justify-between gap-2 border-b border-white/[0.04] pb-1.5 last:border-0 last:pb-0"
+                                              >
+                                                <span className="min-w-0 truncate text-zinc-400">
+                                                  {row.name}
+                                                  <span className="ml-1 text-zinc-600">
+                                                    ({row.kind})
+                                                  </span>
+                                                </span>
+                                                <span className="shrink-0 tabular-nums text-emerald-300/90">
+                                                  {formatMoney(row.total)}
+                                                </span>
+                                              </li>
+                                            ),
+                                          )}
+                                        </ul>
+                                      </div>
+                                    ) : null}
+                                  </>
+                                ) : (
+                                  <p className="rounded-lg border border-zinc-700/50 bg-zinc-950/50 px-3 py-2 text-xs text-zinc-500">
+                                    Sin permiso de lectura de ventas (
+                                    <code className="text-zinc-400">
+                                      sale:read
+                                    </code>
+                                    ): no se muestra el total cobrado ni el
+                                    desglose por medio. El efectivo teórico
+                                    arriba sigue el arqueo de caja.
+                                  </p>
+                                )}
+                              </>
+                            ) : (
+                              <div className="relative overflow-hidden rounded-lg border border-cyan-500/25 bg-black/70 px-4 py-4">
+                                <span className={labelClass}>
+                                  Saldo cajón (sin detalle completo)
                                 </span>
+                                <div className="mt-2 font-mono text-3xl font-light tabular-nums text-cyan-300">
+                                  {r.cashBalance != null
+                                    ? formatMoney(r.cashBalance)
+                                    : "—.--"}
+                                </div>
                               </div>
-                              <div className="font-mono text-3xl font-light tabular-nums tracking-wide text-cyan-300 [text-shadow:0_0_24px_rgba(34,211,238,0.35)]">
-                                {r.cashBalance != null
-                                  ? formatMoney(r.cashBalance)
-                                  : "—.--"}
-                              </div>
-                              <p className="mt-1 font-mono text-[10px] text-zinc-600">
-                                Cash on hand
-                              </p>
-                            </div>
+                            )}
                             <div className="flex flex-wrap gap-2">
                               {canCreate ? (
                                 <>
@@ -726,7 +897,7 @@ function CashRegistersPage() {
                                   onClick={() => startClose(r)}
                                 >
                                   <DoorClosed className="size-3.5" />
-                                  Close
+                                  Cerrar caja
                                 </Button>
                               ) : null}
                             </div>
@@ -828,7 +999,7 @@ function CashRegistersPage() {
         >
           <DialogHeader>
             <DialogTitle className="bg-gradient-to-r from-white to-cyan-200/90 bg-clip-text text-lg font-bold tracking-tight text-transparent">
-              Edit cash register
+              Editar caja registradora
             </DialogTitle>
           </DialogHeader>
           {editBanner ? (
@@ -870,6 +1041,84 @@ function CashRegistersPage() {
               />
               Active
             </label>
+            <div className="space-y-4 border-t border-zinc-700/80 pt-4">
+              <p className={labelClass}>Facturación electrónica (ARCA)</p>
+              <p className="text-xs leading-relaxed text-zinc-500">
+                Punto de venta AFIP y el par certificado / clave privada. Los
+                archivos se suben al bucket privado y solo los usa el servidor
+                (service role).
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="e-arca-pto" className={labelClass}>
+                  Punto de venta
+                </Label>
+                <Input
+                  id="e-arca-pto"
+                  type="number"
+                  min={0}
+                  max={99999}
+                  value={editArcaPtoVta}
+                  onChange={(e) => setEditArcaPtoVta(e.target.value)}
+                  placeholder="Vacío o 0–99999"
+                  className={fieldClass}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="e-arca-exp" className={labelClass}>
+                  Vencimiento del certificado (opcional)
+                </Label>
+                <Input
+                  id="e-arca-exp"
+                  type="date"
+                  value={editArcaExpiresAt}
+                  onChange={(e) => setEditArcaExpiresAt(e.target.value)}
+                  className={fieldClass}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="e-arca-crt" className={labelClass}>
+                  Certificado (.crt)
+                </Label>
+                <Input
+                  id="e-arca-crt"
+                  ref={editCrtRef}
+                  type="file"
+                  accept=".crt,.pem,.key,text/plain,text/*"
+                  className={cn(fieldClass, "py-2")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="e-arca-key" className={labelClass}>
+                  Clave privada (.key)
+                </Label>
+                <Input
+                  id="e-arca-key"
+                  ref={editKeyRef}
+                  type="file"
+                  accept=".crt,.pem,.key,text/plain,text/*"
+                  className={cn(fieldClass, "py-2")}
+                />
+              </div>
+              <p className="text-xs text-zinc-600">
+                Dejá ambos archivos vacíos si no querés reemplazar el par
+                guardado.
+              </p>
+              {editRow?.arcaCrtUploadedAt ? (
+                <p className="text-xs text-cyan-400/90">
+                  Última subida:{" "}
+                  <span className="text-zinc-400">.crt</span>{" "}
+                  {formatDateTime(editRow.arcaCrtUploadedAt)} ·{" "}
+                  <span className="text-zinc-400">.key</span>{" "}
+                  {editRow.arcaKeyUploadedAt
+                    ? formatDateTime(editRow.arcaKeyUploadedAt)
+                    : "—"}
+                </p>
+              ) : (
+                <p className="text-xs text-zinc-600">
+                  Aún no hay certificados en el bucket para esta caja.
+                </p>
+              )}
+            </div>
             <DialogFooter className="gap-2 sm:gap-0">
               <Button
                 type="button"
@@ -877,14 +1126,14 @@ function CashRegistersPage() {
                 className={btnGhostConsole}
                 onClick={() => setEditRow(null)}
               >
-                Cancel
+                Cancelar
               </Button>
               <Button
                 type="submit"
                 disabled={editSaving}
                 className={btnPrimaryConsole}
               >
-                {editSaving ? "Saving…" : "Save"}
+                {editSaving ? "Guardando…" : "Guardar"}
               </Button>
             </DialogFooter>
           </form>
@@ -1023,7 +1272,7 @@ function CashRegistersPage() {
         >
           <DialogHeader>
             <DialogTitle className="bg-gradient-to-r from-white to-cyan-200/90 bg-clip-text text-lg font-bold tracking-tight text-transparent">
-              Close session
+              Cerrar caja (cierre de arqueo)
             </DialogTitle>
           </DialogHeader>
           {closeBanner ? (
@@ -1033,14 +1282,17 @@ function CashRegistersPage() {
           ) : null}
           <form className="space-y-4" onSubmit={(e) => void submitClose(e)}>
             <p className="text-sm leading-relaxed text-zinc-400">
-              Enter final counted amounts. Cash is physical cash in the drawer.
-              For cards and digital methods, enter the total you expect for this
-              shift (from POS reports or batch totals)—not necessarily physical
-              slips; those are optional for audit.
+              Contá el <strong className="text-zinc-300">efectivo físico</strong>{" "}
+              que hay en el cajón y cargalo abajo: es lo que permite ver faltantes
+              o sobrantes frente al efectivo teórico del turno. Para tarjetas,
+              transferencias y otros medios digitales, el sistema ya tiene los
+              importes por venta: podés cargar el total que informe tu liquidación
+              o dejarlo en 0 si asumís que coincide; sirve para registrar
+              diferencias con el adquirente o el banco.
             </p>
             <div className="space-y-2">
               <Label htmlFor="cl-cash" className={labelClass}>
-                Cash
+                Efectivo contado al cierre
               </Label>
               <Input
                 id="cl-cash"
@@ -1055,9 +1307,12 @@ function CashRegistersPage() {
             </div>
             {paymentMethods.filter((pm) => pm.kind !== "cash").length > 0 ? (
               <div className="space-y-3">
-                <Label className={labelClass}>Other payment methods</Label>
+                <Label className={labelClass}>
+                  Otros medios (conteo / liquidación del turno)
+                </Label>
                 <p className="text-xs text-zinc-500">
-                  Cash is entered above. Non-cash methods are counted at close.
+                  Opcional: totales esperados o informados por cierre; el efectivo
+                  va arriba.
                 </p>
                 <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-white/[0.06] bg-black/30 p-3">
                   {paymentMethods
@@ -1092,13 +1347,13 @@ function CashRegistersPage() {
             )}
             <div className="space-y-2">
               <Label htmlFor="cl-note" className={labelClass}>
-                Closing note (optional)
+                Nota de cierre (faltantes, sobrantes, referencias)
               </Label>
               <Textarea
                 id="cl-note"
                 value={closeNote}
                 onChange={(e) => setCloseNote(e.target.value)}
-                placeholder="e.g. batch reference, differences explained…"
+                placeholder="Ej. diferencia con liquidación, retiros justificados…"
                 rows={3}
                 className={cn(fieldClass, "resize-y")}
               />
@@ -1110,14 +1365,14 @@ function CashRegistersPage() {
                 className={btnGhostConsole}
                 onClick={() => setCloseRow(null)}
               >
-                Cancel
+                Cancelar
               </Button>
               <Button
                 type="submit"
                 disabled={closeSaving}
                 className={btnPrimaryConsole}
               >
-                {closeSaving ? "Closing…" : "Close session"}
+                {closeSaving ? "Cerrando…" : "Cerrar caja"}
               </Button>
             </DialogFooter>
           </form>
@@ -1144,11 +1399,12 @@ function CashRegistersPage() {
         >
           <div className="flex shrink-0 flex-col gap-1 border-b border-white/[0.08] px-5 py-4 pr-14">
             <DialogTitle className="bg-gradient-to-r from-white to-violet-200/90 bg-clip-text text-left text-lg font-bold tracking-tight text-transparent">
-              Resumen · {summaryRow?.name ?? "—"}
+              Arqueo de caja · {summaryRow?.name ?? "—"}
             </DialogTitle>
             <DialogDescription className="text-left text-xs text-zinc-500">
-              Movimientos de cajón (ingresos/retiros) y arqueos al cerrar sesión.
-              Ventas y compras aún no se vinculan a caja en el modelo actual.
+              Totales por forma de pago según ventas registradas en esta caja,
+              efectivo teórico del turno abierto, movimientos de cajón y cierres
+              contados.
             </DialogDescription>
             <div className="mt-3 flex flex-wrap gap-2">
               <Button
@@ -1197,36 +1453,236 @@ function CashRegistersPage() {
               </p>
             ) : summaryData ? (
               <div className="space-y-8">
-                <section className="rounded-lg border border-white/[0.07] bg-black/40 p-4">
-                  <h4 className={cn(labelClass, "mb-3 text-zinc-400")}>
-                    Efectivo en cajón (movimientos)
+                <section className="rounded-lg border border-cyan-500/25 bg-black/45 p-4">
+                  <h4 className={cn(labelClass, "mb-1 text-cyan-300/90")}>
+                    Arqueo de caja
                   </h4>
-                  <div className="grid gap-3 font-mono text-sm sm:grid-cols-3">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-widest text-zinc-600">
-                        Ingresos (depósitos)
-                      </p>
-                      <p className="text-lg text-emerald-300 tabular-nums">
-                        {formatMoney(summaryData.totals.depositTotal)}
-                      </p>
+                  <p className="mb-4 text-xs text-zinc-500">
+                    Los importes por medio de pago suman las{" "}
+                    <strong className="text-zinc-400">ventas completadas</strong>{" "}
+                    hechas con esta caja. El efectivo en cajón del turno actual es:{" "}
+                    <strong className="text-zinc-400">
+                      apertura + ventas en efectivo + ingresos al cajón − retiros
+                    </strong>
+                    . Los totales de tarjeta/transferencia suelen coincidir con el
+                    sistema; igual podés contrastarlos al cerrar si tu adquirente
+                    informa diferencias.
+                  </p>
+                  {!summaryData.arqueo ? (
+                    <p className="font-mono text-sm text-zinc-500">
+                      Sin datos de arqueo (falta permiso de lectura de ventas).
+                    </p>
+                  ) : (
+                    <>
+                      <div className="mb-4 overflow-x-auto rounded border border-zinc-800/80">
+                        <table className="w-full min-w-[420px] border-collapse font-mono text-xs">
+                          <thead>
+                            <tr className="border-b border-zinc-800 bg-zinc-950/80 text-left text-[10px] uppercase tracking-widest text-zinc-500">
+                              <th className="px-3 py-2">Medio de pago</th>
+                              <th className="px-3 py-2">Tipo</th>
+                              <th className="px-3 py-2 text-right">
+                                Total ventas (caja)
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {summaryData.arqueo.ventasPorMedioPago.length ===
+                            0 ? (
+                              <tr>
+                                <td
+                                  colSpan={3}
+                                  className="px-3 py-3 text-zinc-600"
+                                >
+                                  Sin ventas completadas aún en esta caja.
+                                </td>
+                              </tr>
+                            ) : (
+                              summaryData.arqueo.ventasPorMedioPago.map((row) => (
+                                <tr
+                                  key={row.paymentMethodId}
+                                  className="border-b border-zinc-800/50 text-zinc-200"
+                                >
+                                  <td className="px-3 py-2">{row.name}</td>
+                                  <td className="px-3 py-2 text-zinc-500">
+                                    {row.kind}
+                                  </td>
+                                  <td className="px-3 py-2 text-right tabular-nums">
+                                    {formatMoney(row.totalVentas)}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                      {summaryData.arqueo.sesionAbierta ? (
+                        <div className="rounded-lg border border-emerald-500/20 bg-emerald-950/15 p-3">
+                          <p className={cn(labelClass, "mb-2 text-emerald-400/90")}>
+                            Turno abierto (efectivo físico)
+                          </p>
+                          <div className="grid gap-2 font-mono text-sm sm:grid-cols-2">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-widest text-zinc-600">
+                                Efectivo al abrir
+                              </p>
+                              <p className="text-cyan-200 tabular-nums">
+                                {formatMoney(
+                                  summaryData.arqueo.sesionAbierta.openingCash,
+                                )}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] uppercase tracking-widest text-zinc-600">
+                                + Ventas efectivo (turno)
+                              </p>
+                              <p className="text-emerald-300/90 tabular-nums">
+                                {formatMoney(
+                                  summaryData.arqueo.sesionAbierta.ventasEfectivo,
+                                )}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] uppercase tracking-widest text-zinc-600">
+                                + Ingresos al cajón
+                              </p>
+                              <p className="text-emerald-300/90 tabular-nums">
+                                {formatMoney(
+                                  summaryData.arqueo.sesionAbierta.ingresosCajon,
+                                )}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] uppercase tracking-widest text-zinc-600">
+                                − Retiros del cajón
+                              </p>
+                              <p className="text-rose-300/90 tabular-nums">
+                                {formatMoney(
+                                  summaryData.arqueo.sesionAbierta.egresosCajon,
+                                )}
+                              </p>
+                            </div>
+                            <div className="sm:col-span-2 border-t border-white/10 pt-2">
+                              <p className="text-[10px] uppercase tracking-widest text-zinc-500">
+                                = Efectivo teórico en cajón (para comparar al
+                                contar)
+                              </p>
+                              <p className="text-lg font-semibold text-white tabular-nums">
+                                {formatMoney(
+                                  summaryData.arqueo.sesionAbierta
+                                    .efectivoTeoricoEnCajon,
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-zinc-600">
+                          No hay sesión abierta: el desglose de efectivo del turno
+                          aparece cuando la caja está abierta.
+                        </p>
+                      )}
+                      <div className="mt-4 border-t border-white/10 pt-4">
+                        <p className={cn(labelClass, "mb-2 text-zinc-500")}>
+                          Movimientos de cajón (todas las sesiones)
+                        </p>
+                        <div className="grid gap-3 font-mono text-sm sm:grid-cols-3">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-zinc-600">
+                              Ingresos (depósitos)
+                            </p>
+                            <p className="text-lg text-emerald-300 tabular-nums">
+                              {formatMoney(summaryData.totals.depositTotal)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-zinc-600">
+                              Egresos (retiros)
+                            </p>
+                            <p className="text-lg text-rose-300 tabular-nums">
+                              {formatMoney(summaryData.totals.withdrawalTotal)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-zinc-600">
+                              Neto ingresos − retiros
+                            </p>
+                            <p className="text-lg text-cyan-300 tabular-nums">
+                              {formatMoney(summaryData.totals.netCashMovements)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </section>
+
+                <section className="rounded-lg border border-white/[0.07] bg-black/40 p-4">
+                  <h4 className={cn(labelClass, "mb-1 text-zinc-400")}>
+                    Ventas recientes (detalle)
+                  </h4>
+                  <p className="mb-3 text-xs text-zinc-600">
+                    Cada venta guarda la sesión de caja abierta al facturar. Solo
+                    se listan ventas de esta caja registradora.
+                  </p>
+                  {!summaryData.salesIncluded ? (
+                    <p className="font-mono text-sm text-zinc-500">
+                      No tenés permiso para ver ventas (`sale:read`). Pedí acceso
+                      o revisá con un usuario autorizado.
+                    </p>
+                  ) : summaryData.sales.length === 0 ? (
+                    <p className="font-mono text-sm text-zinc-600">
+                      No hay ventas registradas con esta caja.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto rounded border border-zinc-800/80">
+                      <table className="w-full min-w-[760px] border-collapse font-mono text-xs">
+                        <thead>
+                          <tr className="border-b border-zinc-800 bg-zinc-950/80 text-left text-[10px] uppercase tracking-widest text-zinc-500">
+                            <th className="px-2 py-2">Fecha venta</th>
+                            <th className="px-2 py-2">Sesión (apertura)</th>
+                            <th className="px-2 py-2 text-right">Total</th>
+                            <th className="px-2 py-2">Estado</th>
+                            <th className="px-2 py-2">Cliente / nombre</th>
+                            <th className="px-2 py-2">Usuario</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {summaryData.sales.map((s) => (
+                            <tr
+                              key={s.id}
+                              className="border-b border-zinc-800/50 text-zinc-300"
+                            >
+                              <td className="whitespace-nowrap px-2 py-2">
+                                {formatDateTime(s.soldAt)}
+                              </td>
+                              <td className="whitespace-nowrap px-2 py-2 text-zinc-500">
+                                {sessionOpenedLabel(
+                                  s.cashRegisterSessionId,
+                                  summaryData.sessions,
+                                )}
+                              </td>
+                              <td className="px-2 py-2 text-right tabular-nums text-emerald-300/90">
+                                {s.currency}{" "}
+                                {formatMoney(s.total)}
+                              </td>
+                              <td className="px-2 py-2 capitalize text-zinc-400">
+                                {s.status}
+                              </td>
+                              <td className="max-w-[200px] truncate px-2 py-2 text-zinc-500">
+                                {s.customerName ?? "—"}
+                              </td>
+                              <td
+                                className="px-2 py-2 text-zinc-500"
+                                title={s.createdBy ?? undefined}
+                              >
+                                {shortUserId(s.createdBy)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    <div>
-                      <p className="text-[10px] uppercase tracking-widest text-zinc-600">
-                        Egresos (retiros)
-                      </p>
-                      <p className="text-lg text-rose-300 tabular-nums">
-                        {formatMoney(summaryData.totals.withdrawalTotal)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] uppercase tracking-widest text-zinc-600">
-                        Neto movimientos
-                      </p>
-                      <p className="text-lg text-cyan-300 tabular-nums">
-                        {formatMoney(summaryData.totals.netCashMovements)}
-                      </p>
-                    </div>
-                  </div>
+                  )}
                 </section>
 
                 {summaryData.aggregatedClosingLines.length > 0 ? (

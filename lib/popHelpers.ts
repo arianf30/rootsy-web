@@ -44,7 +44,7 @@ export async function getPopById(popId: string, options?: GetPopByIdOptions) {
     const { data: pop, error: popError } = await supabase
       .from("pops")
       .select(
-        "id, name, image_url, site_id, settings, owner_user_id, business_type_id, country, state, city, street_address, postal_code, phone, background_image_url, invoice_logo_url",
+        "id, name, image_url, site_id, settings, owner_user_id, business_type_id, country, state, city, street_address, postal_code, phone, background_image_url, invoice_logo_url, fiscal_cuit, fiscal_razon_social, fiscal_padron_synced_at, fiscal_inicio_actividades_date, fiscal_ingresos_brutos_text, fiscal_padron_actividades_json, fiscal_actividad_seleccionada_id",
       )
       .eq("id", popId)
       .single()
@@ -84,6 +84,30 @@ export async function getPopById(popId: string, options?: GetPopByIdOptions) {
       phone: pop.phone ?? null,
       backgroundImageUrl: pop.background_image_url ?? null,
       invoiceLogoUrl: pop.invoice_logo_url ?? null,
+      fiscalCuit: pop.fiscal_cuit != null ? String(pop.fiscal_cuit) : null,
+      fiscalRazonSocial: pop.fiscal_razon_social != null
+        ? String(pop.fiscal_razon_social)
+        : null,
+      fiscalPadronSyncedAt:
+        pop.fiscal_padron_synced_at != null
+          ? String(pop.fiscal_padron_synced_at)
+          : null,
+      fiscalInicioActividadesDate:
+        pop.fiscal_inicio_actividades_date != null
+          ? String(pop.fiscal_inicio_actividades_date).slice(0, 10)
+          : null,
+      fiscalIngresosBrutosText:
+        pop.fiscal_ingresos_brutos_text != null
+          ? String(pop.fiscal_ingresos_brutos_text)
+          : null,
+      fiscalPadronActividadesJson:
+        pop.fiscal_padron_actividades_json != null
+          ? JSON.stringify(pop.fiscal_padron_actividades_json)
+          : null,
+      fiscalActividadSeleccionadaId:
+        pop.fiscal_actividad_seleccionada_id != null
+          ? String(pop.fiscal_actividad_seleccionada_id)
+          : null,
       settings: pop.settings || {},
     }
 

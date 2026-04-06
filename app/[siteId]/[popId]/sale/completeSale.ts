@@ -199,6 +199,8 @@ export type CompleteSaleInput = {
   valorDescuentoPorcentaje: number
   valorDescuentoFijo: number
   invoiceTypeLabel?: string | null
+  /** Datos fiscales manuales o padrón (nombre / CUIT-DNI) cuando aplica override. */
+  fiscalCustomer?: { name: string; taxId: string | null } | null
 }
 
 export async function completeSale(
@@ -356,6 +358,16 @@ export async function completeSale(
       }
       clientName = String(cl.name ?? "")
       clientTaxId = cl.tax_id ? String(cl.tax_id) : null
+    }
+    const fc = input.fiscalCustomer
+    if (input.clientId?.trim()) {
+      if (fc) {
+        if (fc.taxId?.trim()) clientTaxId = fc.taxId.trim()
+        if (fc.name?.trim()) clientName = fc.name.trim()
+      }
+    } else if (fc?.name?.trim() || fc?.taxId?.trim()) {
+      clientName = fc.name?.trim() || null
+      clientTaxId = fc.taxId?.trim() || null
     }
 
     type BuiltLine = {

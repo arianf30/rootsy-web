@@ -134,6 +134,13 @@ export const ARG_V3_DEFAULT_CHART_ACCOUNTS: readonly ArgV3DefaultChartRow[] = [
     level: 4,
   },
   {
+    code: "6.1.1.05",
+    name: "Diferencias de arqueo de caja",
+    accountType: "gastos",
+    nature: "deudora",
+    level: 4,
+  },
+  {
     code: "6.2.1.01",
     name: "Publicidad y marketing",
     accountType: "gastos",
@@ -195,3 +202,18 @@ export const CHART_VENTAS_GRAVADAS_CODES: readonly string[] = [
   ARG_V3_CHART_CODE.ventas,
   "4.1.1.02",
 ]
+
+/** Faltante de caja (gasto); fallback si el plan viejo no tiene 6.1.1.05. */
+export const CHART_DIFERENCIA_ARQUEO_GASTO_CODES: readonly string[] = [
+  "6.1.1.05",
+  "6.2.1.02",
+  "6.2.1.03",
+]
+
+/** Sobrante de caja (otros ingresos). */
+export const CHART_ARQUEO_SOBRANTE_INGRESO_CODES: readonly string[] = [
+  "4.2.1.01",
+  "4.1.1.01",
+]
+
+export const CHART_CAJA_EFECTIVO_CODES: readonly string[] = ["1.1.1.01"]
