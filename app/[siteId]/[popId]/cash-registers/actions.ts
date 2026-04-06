@@ -417,11 +417,6 @@ export async function getCashRegistersPageData(popId: string): Promise<
       POP_PERMS.CASH_REGISTER_DELETE.resource,
       POP_PERMS.CASH_REGISTER_DELETE.action,
     )
-    const canReadSales = permissionKeysInclude(
-      snap.keys,
-      POP_PERMS.SALE_READ.resource,
-      POP_PERMS.SALE_READ.action,
-    )
     const popRes = await getPopById(popId)
     const popName =
       popRes.success && popRes.pop ? String(popRes.pop.name ?? "") : ""
@@ -474,7 +469,7 @@ export async function getCashRegistersPageData(popId: string): Promise<
           let totalCobradoTurno: number | null = null
           let cobrosPorMedio: CashRegisterOpenSessionTotals["cobrosPorMedio"] =
             null
-          if (canReadSales) {
+          if (canRead) {
             const cob = await loadCobrosTurnoPorMedio(
               supabase,
               popId,
@@ -938,24 +933,6 @@ export async function closeCashSession(
     let arqueoEntryId: string | null = null
 
     if (absDiff >= 0.01) {
-      if (
-        !permissionKeysInclude(
-          snap.keys,
-          POP_PERMS.ACCOUNTS_CREATE.resource,
-          POP_PERMS.ACCOUNTS_CREATE.action,
-        ) ||
-        !permissionKeysInclude(
-          snap.keys,
-          POP_PERMS.ACCOUNTS_UPDATE.resource,
-          POP_PERMS.ACCOUNTS_UPDATE.action,
-        )
-      ) {
-        return {
-          success: false,
-          error:
-            "Hay diferencia de arqueo en efectivo y se requiere permiso de cuentas (crear y actualizar asientos) para registrarla.",
-        }
-      }
       const popRes = await getPopById(popId)
       if (!popRes.success || !popRes.pop) {
         return {
@@ -1395,14 +1372,8 @@ export async function getCashRegisterSummary(
     )
     let arqueo: CashRegisterSummaryData["arqueo"] = null
     let sales: CashRegisterSummarySale[] = []
-    let salesIncluded = false
-    const canReadSales = permissionKeysInclude(
-      snap.keys,
-      POP_PERMS.SALE_READ.resource,
-      POP_PERMS.SALE_READ.action,
-    )
-    if (canReadSales) {
-      salesIncluded = true
+    const salesIncluded = true
+    {
       const { data: completedSaleIds } = await supabase
         .from("sales")
         .select("id")
@@ -1503,8 +1474,6 @@ export async function getCashRegisterSummary(
         customerName: r.customer_name != null ? String(r.customer_name) : null,
         currency: String(r.currency ?? "ARS"),
       }))
-    } else {
-      arqueo = null
     }
     const data: CashRegisterSummaryData = {
       registerName,

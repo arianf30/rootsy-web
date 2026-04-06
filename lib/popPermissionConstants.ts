@@ -55,6 +55,11 @@ export const POP_PERMS = {
   INVENTORY_CREATE: { resource: "inventory", action: "create" },
   INVENTORY_UPDATE: { resource: "inventory", action: "update" },
   INVENTORY_DELETE: { resource: "inventory", action: "delete" },
+
+  OPERATIONS_READ: { resource: "operations", action: "read" },
+  OPERATIONS_CREATE: { resource: "operations", action: "create" },
+  OPERATIONS_UPDATE: { resource: "operations", action: "update" },
+  OPERATIONS_DELETE: { resource: "operations", action: "delete" },
 } as const
 
 export function permissionKeysInclude(

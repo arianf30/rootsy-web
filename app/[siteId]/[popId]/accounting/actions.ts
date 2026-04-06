@@ -65,8 +65,8 @@ export async function getAccountingPageData(popId: string): Promise<
     const snap = await loadPopPermissionsSnapshot(popId)
     const canReadAccounts = permissionKeysInclude(
       snap.keys,
-      POP_PERMS.ACCOUNTS_READ.resource,
-      POP_PERMS.ACCOUNTS_READ.action,
+      POP_PERMS.ACCOUNTING_READ.resource,
+      POP_PERMS.ACCOUNTING_READ.action,
     )
     if (!canReadAccounts) {
       return {
@@ -77,8 +77,8 @@ export async function getAccountingPageData(popId: string): Promise<
     }
     const canCreate = permissionKeysInclude(
       snap.keys,
-      POP_PERMS.ACCOUNTS_CREATE.resource,
-      POP_PERMS.ACCOUNTS_CREATE.action,
+      POP_PERMS.ACCOUNTING_CREATE.resource,
+      POP_PERMS.ACCOUNTING_CREATE.action,
     )
     const popRes = await getPopById(popId)
     const popName =
@@ -212,8 +212,8 @@ export async function getAccountingJournalEntries(
     if (
       !permissionKeysInclude(
         snap.keys,
-        POP_PERMS.ACCOUNTS_READ.resource,
-        POP_PERMS.ACCOUNTS_READ.action,
+        POP_PERMS.ACCOUNTING_READ.resource,
+        POP_PERMS.ACCOUNTING_READ.action,
       )
     ) {
       return { success: false, error: "Sin permiso para ver el libro diario." }
@@ -293,8 +293,8 @@ export async function getAccountingEntryLines(
     if (
       !permissionKeysInclude(
         snap.keys,
-        POP_PERMS.ACCOUNTS_READ.resource,
-        POP_PERMS.ACCOUNTS_READ.action,
+        POP_PERMS.ACCOUNTING_READ.resource,
+        POP_PERMS.ACCOUNTING_READ.action,
       )
     ) {
       return { success: false, error: "Sin permiso." }
@@ -370,8 +370,8 @@ export async function getAccountingLedgerForAccount(
     if (
       !permissionKeysInclude(
         snap.keys,
-        POP_PERMS.ACCOUNTS_READ.resource,
-        POP_PERMS.ACCOUNTS_READ.action,
+        POP_PERMS.ACCOUNTING_READ.resource,
+        POP_PERMS.ACCOUNTING_READ.action,
       )
     ) {
       return { success: false, error: "Sin permiso." }
@@ -495,8 +495,8 @@ export async function getAccountingTrialBalance(
     if (
       !permissionKeysInclude(
         snap.keys,
-        POP_PERMS.ACCOUNTS_READ.resource,
-        POP_PERMS.ACCOUNTS_READ.action,
+        POP_PERMS.ACCOUNTING_READ.resource,
+        POP_PERMS.ACCOUNTING_READ.action,
       )
     ) {
       return { success: false, error: "Sin permiso." }
@@ -673,8 +673,8 @@ export async function createChartAccount(
     if (
       !permissionKeysInclude(
         snap.keys,
-        POP_PERMS.ACCOUNTS_CREATE.resource,
-        POP_PERMS.ACCOUNTS_CREATE.action,
+        POP_PERMS.ACCOUNTING_CREATE.resource,
+        POP_PERMS.ACCOUNTING_CREATE.action,
       )
     ) {
       return { success: false, error: "Sin permiso para crear cuentas." }

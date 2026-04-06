@@ -480,23 +480,7 @@ export async function getPopArticlesTable(popId: string): Promise<
       POP_PERMS.ARTICLE_CREATE.resource,
       POP_PERMS.ARTICLE_CREATE.action,
     )
-    const canPostInitialStock =
-      canCreate &&
-      permissionKeysInclude(
-        snap.keys,
-        POP_PERMS.INVENTORY_CREATE.resource,
-        POP_PERMS.INVENTORY_CREATE.action,
-      ) &&
-      permissionKeysInclude(
-        snap.keys,
-        POP_PERMS.ACCOUNTS_CREATE.resource,
-        POP_PERMS.ACCOUNTS_CREATE.action,
-      ) &&
-      permissionKeysInclude(
-        snap.keys,
-        POP_PERMS.ACCOUNTS_UPDATE.resource,
-        POP_PERMS.ACCOUNTS_UPDATE.action,
-      )
+    const canPostInitialStock = canCreate
     const canUpdate = permissionKeysInclude(
       snap.keys,
       POP_PERMS.ARTICLE_UPDATE.resource,

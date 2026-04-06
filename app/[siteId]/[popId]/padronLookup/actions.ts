@@ -39,17 +39,29 @@ export async function lookupPadronForPop(
       }
     }
     const snap = await loadPopPermissionsSnapshot(popId)
-    const canSettings = permissionKeysInclude(
-      snap.keys,
-      POP_PERMS.SETTINGS_READ.resource,
-      POP_PERMS.SETTINGS_READ.action,
-    )
-    const canSale = permissionKeysInclude(
-      snap.keys,
-      POP_PERMS.SALE_READ.resource,
-      POP_PERMS.SALE_READ.action,
-    )
-    if (!canSettings && !canSale) {
+    const keys = snap.keys
+    const canPadron =
+      permissionKeysInclude(
+        keys,
+        POP_PERMS.SETTINGS_READ.resource,
+        POP_PERMS.SETTINGS_READ.action,
+      ) ||
+      permissionKeysInclude(
+        keys,
+        POP_PERMS.SALE_READ.resource,
+        POP_PERMS.SALE_READ.action,
+      ) ||
+      permissionKeysInclude(
+        keys,
+        POP_PERMS.CLIENT_READ.resource,
+        POP_PERMS.CLIENT_READ.action,
+      ) ||
+      permissionKeysInclude(
+        keys,
+        POP_PERMS.SUPPLIER_READ.resource,
+        POP_PERMS.SUPPLIER_READ.action,
+      )
+    if (!canPadron) {
       return {
         success: false,
         error: "No tenés permiso para consultar el padrón.",

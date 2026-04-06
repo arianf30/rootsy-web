@@ -154,24 +154,6 @@ export async function createInventoryAdjustment(
     ) {
       return { success: false, error: "Sin permiso para registrar ajustes de stock." }
     }
-    if (
-      !permissionKeysInclude(
-        snap.keys,
-        POP_PERMS.ACCOUNTS_CREATE.resource,
-        POP_PERMS.ACCOUNTS_CREATE.action,
-      ) ||
-      !permissionKeysInclude(
-        snap.keys,
-        POP_PERMS.ACCOUNTS_UPDATE.resource,
-        POP_PERMS.ACCOUNTS_UPDATE.action,
-      )
-    ) {
-      return {
-        success: false,
-        error:
-          "Se requiere permiso de cuentas (crear y actualizar asientos) para registrar el ajuste con asiento contable.",
-      }
-    }
     const popRes = await getPopById(popId)
     if (!popRes.success || !popRes.pop) {
       return { success: false, error: popRes.error || "No se pudo validar el punto de venta." }
@@ -558,24 +540,6 @@ export async function createInitialStockLedgerForArticle(
     ) {
       return { success: false, error: "Sin permiso para registrar movimientos de inventario." }
     }
-    if (
-      !permissionKeysInclude(
-        snap.keys,
-        POP_PERMS.ACCOUNTS_CREATE.resource,
-        POP_PERMS.ACCOUNTS_CREATE.action,
-      ) ||
-      !permissionKeysInclude(
-        snap.keys,
-        POP_PERMS.ACCOUNTS_UPDATE.resource,
-        POP_PERMS.ACCOUNTS_UPDATE.action,
-      )
-    ) {
-      return {
-        success: false,
-        error:
-          "Se requiere permiso de cuentas (crear y actualizar asientos) para registrar el stock inicial.",
-      }
-    }
     const popRes = await getPopById(popId)
     if (!popRes.success || !popRes.pop) {
       return { success: false, error: popRes.error || "No se pudo validar el punto de venta." }
@@ -934,18 +898,7 @@ export async function getPopInventoryPageData(popId: string): Promise<
       POP_PERMS.INVENTORY_CREATE.resource,
       POP_PERMS.INVENTORY_CREATE.action,
     )
-    const canPostAdjustmentAccounting =
-      canCreate &&
-      permissionKeysInclude(
-        snap.keys,
-        POP_PERMS.ACCOUNTS_CREATE.resource,
-        POP_PERMS.ACCOUNTS_CREATE.action,
-      ) &&
-      permissionKeysInclude(
-        snap.keys,
-        POP_PERMS.ACCOUNTS_UPDATE.resource,
-        POP_PERMS.ACCOUNTS_UPDATE.action,
-      )
+    const canPostAdjustmentAccounting = canCreate
     const canUpdate = permissionKeysInclude(
       snap.keys,
       POP_PERMS.INVENTORY_UPDATE.resource,

@@ -68,43 +68,26 @@ export async function getSaleCatalog(popId: string): Promise<
     }
 
     const snap = await loadPopPermissionsSnapshot(popId)
-    const canSale = permissionKeysInclude(
+    const hasSaleRead = permissionKeysInclude(
       snap.keys,
       POP_PERMS.SALE_READ.resource,
       POP_PERMS.SALE_READ.action,
     )
-    const canReadArticles = permissionKeysInclude(
-      snap.keys,
-      POP_PERMS.ARTICLE_READ.resource,
-      POP_PERMS.ARTICLE_READ.action,
-    )
-    if (!canSale || !canReadArticles) {
+    if (!hasSaleRead) {
       return {
         success: false,
         error:
-          "Necesitás permisos de venta y de lectura de artículos para usar esta pantalla.",
+          "Necesitás permiso de lectura de ventas (sale:read) para usar esta pantalla.",
       }
     }
 
-    const canReadClients = permissionKeysInclude(
-      snap.keys,
-      POP_PERMS.CLIENT_READ.resource,
-      POP_PERMS.CLIENT_READ.action,
-    )
-    const canReadPaymentMethods = permissionKeysInclude(
-      snap.keys,
-      POP_PERMS.PAYMENT_METHOD_READ.resource,
-      POP_PERMS.PAYMENT_METHOD_READ.action,
-    )
+    const canReadClients = hasSaleRead
+    const canReadPaymentMethods = hasSaleRead
+    const canReadCashRegisters = hasSaleRead
     const canCreateSale = permissionKeysInclude(
       snap.keys,
       POP_PERMS.SALE_CREATE.resource,
       POP_PERMS.SALE_CREATE.action,
-    )
-    const canReadCashRegisters = permissionKeysInclude(
-      snap.keys,
-      POP_PERMS.CASH_REGISTER_READ.resource,
-      POP_PERMS.CASH_REGISTER_READ.action,
     )
 
     const popRes = await getPopById(popId)

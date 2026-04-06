@@ -100,13 +100,13 @@ export async function getOperationsSales(popId: string): Promise<
     if (
       !permissionKeysInclude(
         snap.keys,
-        POP_PERMS.SALE_READ.resource,
-        POP_PERMS.SALE_READ.action,
+        POP_PERMS.OPERATIONS_READ.resource,
+        POP_PERMS.OPERATIONS_READ.action,
       )
     ) {
       return {
         success: false,
-        error: "No tenés permiso para ver las operaciones de venta en este punto.",
+        error: "No tenés permiso para ver operaciones en este punto.",
         redirect: popMenuHref(await getPopSiteId(popId), popId),
         sales: emptySales,
         popName: "",

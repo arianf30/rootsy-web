@@ -271,11 +271,6 @@ export async function getPopPaymentMethodsTable(popId: string): Promise<
       POP_PERMS.PAYMENT_METHOD_DELETE.resource,
       POP_PERMS.PAYMENT_METHOD_DELETE.action,
     )
-    const canAccountingRead = permissionKeysInclude(
-      snap.keys,
-      POP_PERMS.ACCOUNTS_READ.resource,
-      POP_PERMS.ACCOUNTS_READ.action,
-    )
     const popRes = await getPopById(popId)
     const popName =
       popRes.success && popRes.pop ? String(popRes.pop.name ?? "") : ""
@@ -295,25 +290,23 @@ export async function getPopPaymentMethodsTable(popId: string): Promise<
       }
     }
     let labelById = new Map<string, string>()
-    if (canAccountingRead) {
-      const { data: accRows, error: accErr } = await supabase
-        .from("accounting_chart_of_accounts")
-        .select("id, code, name")
-        .eq("pop_id", popId)
-        .eq("is_movement_account", true)
-        .order("code", { ascending: true })
-      if (accErr) {
-        return {
-          success: false,
-          error: accErr.message || "No se pudo cargar el plan de cuentas.",
-          ...empty,
-          popName,
-        }
+    const { data: accRows, error: accErr } = await supabase
+      .from("accounting_chart_of_accounts")
+      .select("id, code, name")
+      .eq("pop_id", popId)
+      .eq("is_movement_account", true)
+      .order("code", { ascending: true })
+    if (accErr) {
+      return {
+        success: false,
+        error: accErr.message || "No se pudo cargar el plan de cuentas.",
+        ...empty,
+        popName,
       }
-      for (const a of accRows || []) {
-        const id = String(a.id)
-        labelById.set(id, `${String(a.code ?? "")} — ${String(a.name ?? "")}`)
-      }
+    }
+    for (const a of accRows || []) {
+      const id = String(a.id)
+      labelById.set(id, `${String(a.code ?? "")} — ${String(a.name ?? "")}`)
     }
     const kinds: PaymentMethodKind[] = [
       "cash",
@@ -332,9 +325,7 @@ export async function getPopPaymentMethodsTable(popId: string): Promise<
         : null
       let accountingAccountLabel: string | null = null
       if (aid) {
-        accountingAccountLabel = canAccountingRead
-          ? labelById.get(aid) ?? "—"
-          : "Vinculada"
+        accountingAccountLabel = labelById.get(aid) ?? "—"
       }
       return {
         id: String(r.id),

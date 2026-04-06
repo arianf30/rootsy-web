@@ -84,11 +84,6 @@ function canResolveCashRegisterForInvoiceUi(
       snap.keys,
       POP_PERMS.INVOICES_CREATE.resource,
       POP_PERMS.INVOICES_CREATE.action,
-    ) &&
-    permissionKeysInclude(
-      snap.keys,
-      POP_PERMS.CASH_REGISTER_READ.resource,
-      POP_PERMS.CASH_REGISTER_READ.action,
     )
   )
 }
@@ -344,18 +339,6 @@ export async function createArcaInvoiceWithOpenCashRegister(
       )
     ) {
       return { success: false, error: "Sin permiso para emitir facturas." }
-    }
-    if (
-      !permissionKeysInclude(
-        snap.keys,
-        POP_PERMS.CASH_REGISTER_READ.resource,
-        POP_PERMS.CASH_REGISTER_READ.action,
-      )
-    ) {
-      return {
-        success: false,
-        error: "Se requiere permiso de cajas para validar la sesión abierta.",
-      }
     }
     const popRes = await getPopById(popId)
     if (!popRes.success || !popRes.pop?.fiscalCuit) {

@@ -236,50 +236,7 @@ export async function completeSale(
       return {
         success: false,
         error:
-          "Sin permiso para registrar o actualizar ventas (crear y actualizar).",
-      }
-    }
-    if (
-      !permissionKeysInclude(
-        snap.keys,
-        POP_PERMS.INVENTORY_CREATE.resource,
-        POP_PERMS.INVENTORY_CREATE.action,
-      )
-    ) {
-      return {
-        success: false,
-        error: "Sin permiso de inventario para descontar stock de la venta.",
-      }
-    }
-    if (
-      !permissionKeysInclude(
-        snap.keys,
-        POP_PERMS.ACCOUNTS_CREATE.resource,
-        POP_PERMS.ACCOUNTS_CREATE.action,
-      ) ||
-      !permissionKeysInclude(
-        snap.keys,
-        POP_PERMS.ACCOUNTS_UPDATE.resource,
-        POP_PERMS.ACCOUNTS_UPDATE.action,
-      )
-    ) {
-      return {
-        success: false,
-        error:
-          "Se requiere permiso de cuentas (crear y actualizar asientos) para registrar la venta.",
-      }
-    }
-    if (
-      !permissionKeysInclude(
-        snap.keys,
-        POP_PERMS.CASH_REGISTER_READ.resource,
-        POP_PERMS.CASH_REGISTER_READ.action,
-      )
-    ) {
-      return {
-        success: false,
-        error:
-          "Se requiere permiso para ver cajas y asociar la venta a una sesión abierta.",
+          "Sin permiso para completar ventas (se requieren sale:create y sale:update: stock, cobro y asiento se registran en el mismo flujo).",
       }
     }
 
