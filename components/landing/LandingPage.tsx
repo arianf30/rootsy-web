@@ -159,6 +159,11 @@ interface Faq {
   a: string;
 }
 
+const FAQ_OFFLINE: Faq = {
+  q: "¿Qué pasa si me quedo sin conexión?",
+  a: "Podés seguir usando Rootsy sin problemas. Lo que hagas mientras no hay internet queda registrado, y cuando vuelve la conexión se sincroniza solo con lo que se hizo en ese tiempo.",
+}
+
 interface SegmentData {
   id: SegmentId;
   label: string;
@@ -356,11 +361,11 @@ const segments: Record<SegmentId, SegmentData> = {
       },
     ],
     faqs: [
+      FAQ_OFFLINE,
       { q: "¿Necesito una computadora o algún equipo especial?", a: "No. Rootsy funciona desde cualquier notebook, tablet o celular con navegador. Si ya tenés lector de código de barras o impresora de tickets, los conectás sin problema." },
       { q: "¿Emite factura electrónica ARCA?", a: "Sí. Emitís facturas A, B, C y remitos integrados con ARCA directamente desde el punto de venta, sin pasar a otro sistema." },
       { q: "¿Puedo migrar mi lista de productos actual?", a: "Sí. Importás tu stock y tus precios desde una planilla de Excel en minutos, y te ayudamos en la puesta a punto inicial." },
       { q: "¿Sirve si tengo más de un local?", a: "Sí. Gestionás todas tus sucursales desde un solo panel, con stock y reportes consolidados o por local. Está disponible desde el plan Escalable." },
-      { q: "¿Qué pasa si se corta internet?", a: "Podés seguir cobrando en modo offline y las ventas se sincronizan automáticamente cuando vuelve la conexión." },
     ],
   },
   elaboracion: {
@@ -531,11 +536,12 @@ const segments: Record<SegmentId, SegmentData> = {
       },
     ],
     faqs: [
+      FAQ_OFFLINE,
       { q: "¿Puedo cargar recetas con sub-recetas o preparaciones intermedias?", a: "Sí. Podés armar recetas compuestas por otras preparaciones, y Rootsy calcula el costo total propagando cada nivel automáticamente." },
       { q: "¿Cómo se actualiza el costo cuando cambia el precio de un insumo?", a: "Al actualizar el precio de una materia prima, todos los productos que la usan recalculan su costo y su precio sugerido al instante." },
-      { q: "¿Puedo trazar un lote desde el insumo hasta la venta?", a: "Sí. Cada lote queda vinculado a sus insumos de origen y a las ventas donde se despachó, con trazabilidad completa." },
+      { q: "¿Puedo vender productos por peso, con balanza?", a: "Sí. Rootsy está pensado para dietéticas, carnicerías, verdulerías y otros negocios que venden por kilo o por gramo: pesás, cobrás y el stock se actualiza solo." },
       { q: "¿Sirve si produzco y también vendo al público?", a: "Totalmente. Rootsy integra producción, stock y punto de venta, así lo que producís se descuenta y se vende en el mismo sistema." },
-      { q: "¿Puedo controlar vencimientos de materias primas?", a: "Sí. Gestionás lotes con fecha de vencimiento y recibís alertas antes de que un insumo caduque." },
+      { q: "¿Puedo fabricar o fraccionar mis propios productos para vender?", a: "Sí. Comprás a granel, por ejemplo una bolsa de 25 kg de almendras, y Rootsy te permite fraccionar y vender en bolsitas de 100 g, descontando el insumo del stock." },
     ],
   },
   gastronomia: {
@@ -721,11 +727,15 @@ const segments: Record<SegmentId, SegmentData> = {
       },
     ],
     faqs: [
+      FAQ_OFFLINE,
       { q: "¿Los mozos pueden tomar el pedido desde el celular?", a: "Sí. Cada mozo toma la comanda desde su celular o una tablet y el pedido llega a cocina y barra en el acto, sin volver al mostrador." },
       { q: "¿Puedo dividir la cuenta entre varios comensales?", a: "Sí. Dividís por comensal, por producto o en partes iguales, y cobrás cada parte con el medio de pago que prefiera cada uno." },
       { q: "¿La carta QR se actualiza sola?", a: "Sí. Cambiás precios, platos o disponibilidad desde tu celular y la carta QR de tus clientes se actualiza al instante." },
       { q: "¿Descuenta ingredientes del stock con cada venta?", a: "Sí. Al cargar las recetas, cada plato vendido descuenta sus ingredientes del inventario automáticamente." },
       { q: "¿Puedo gestionar delivery y salón en el mismo lugar?", a: "Sí. Los pedidos de salón, mostrador y delivery conviven en un solo panel, con la posibilidad de sumar el módulo de Delivery multicanal." },
+      { q: "¿Puedo vender por Pedidos Ya?", a: "Sí. Rootsy se integra con Pedidos Ya y otras apps de delivery, como Rappi, para que esos pedidos convivan con el salón y el mostrador en un solo lugar." },
+      { q: "¿Puedo cobrar con Mercado Pago y MODO?", a: "Sí. Podés cobrar con QR, tarjetas, efectivo y los medios que ya usás en el local, incluido Mercado Pago y MODO." },
+      { q: "¿Puedo usar pantalla de cocina para las comandas, en lugar de impresora?", a: "Sí. Los pedidos pasan del salón a una pantalla de cocina (KDS), sin papeles, sin gritos y sin errores. Ves el estado de cada comanda en tiempo real y cocina y salón quedan sincronizados." },
     ],
   },
 };
