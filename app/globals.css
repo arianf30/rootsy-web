@@ -46,6 +46,9 @@
   --amber: oklch(0.75 0.12 75);
   --bark: oklch(0.45 0.06 50);
   --cream: oklch(0.96 0.02 90);
+  --rootsy-volt: #02fe85;
+  --rootsy-volt-cyan: #02fed1;
+  --rootsy-navy-cta: #000347;
 }
 
 .dark {
@@ -91,10 +94,14 @@
   --amber: #fbbf24;
   --bark: #78716c;
   --cream: rgb(255 255 255 / 0.92);
+  /* Landing Make — acento eléctrico y CTA navy */
+  --rootsy-volt: #02fe85;
+  --rootsy-volt-cyan: #02fed1;
+  --rootsy-navy-cta: #000347;
 }
 
 @theme inline {
-  --font-sans: var(--font-nunito), 'Nunito', sans-serif;
+  --font-sans: var(--font-nunito-sans), 'Nunito Sans', sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --color-rootsy-hairline: var(--rootsy-hairline);
   --color-rootsy-particle: var(--rootsy-particle);
@@ -105,6 +112,9 @@
   --color-amber: var(--amber);
   --color-bark: var(--bark);
   --color-cream: var(--cream);
+  --color-volt: var(--rootsy-volt);
+  --color-volt-cyan: var(--rootsy-volt-cyan);
+  --color-navy-cta: var(--rootsy-navy-cta);
   /* Paleta primitiva 50–950 — mantener alineada con lib/rootsy-palette.ts */
   --color-forest-50: #ecfdf5;
   --color-forest-100: #d1fae5;
@@ -313,6 +323,15 @@
     animation-name: rootsy-float;
     animation-timing-function: ease-in-out;
     animation-iteration-count: infinite;
+  }
+
+  @keyframes trickle {
+    0% {
+      transform: translateY(-100%);
+    }
+    100% {
+      transform: translateY(220%);
+    }
   }
 
   @keyframes rootsy-float {
@@ -707,6 +726,10 @@
       transition: box-shadow 0.3s ease;
     }
     .rootsy-marquee-logos {
+      animation: none;
+    }
+
+    [class*="trickle"] {
       animation: none;
     }
 

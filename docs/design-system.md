@@ -56,7 +56,7 @@ Objetivo: que la app recuerde a los **menús de juegos premium en PS5** (limpiez
 
 ### Tipografía
 
-- **Sans:** Nunito (`font-sans`, variable `--font-nunito`).
+- **Sans:** Nunito Sans (`font-sans`, variable `--font-nunito-sans`) — misma familia que el sitio en Figma Make.
 - **Mono:** Geist Mono (`font-mono`, variable `--font-geist-mono`) para atajos, códigos, datos tabulares.
 
 ---

@@ -1,23 +1,24 @@
 import type { Metadata } from 'next'
-import { Nunito, Geist_Mono } from 'next/font/google'
+import { Nunito_Sans, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AppAppearanceShell } from '@/components/app-appearance-shell'
 import './globals.css'
 
-const nunito = Nunito({ 
-  subsets: ["latin"],
-  variable: '--font-nunito',
-  weight: ['400', '500', '600', '700', '800']
-});
+const nunitoSans = Nunito_Sans({
+  subsets: ['latin'],
+  variable: '--font-nunito-sans',
+  weight: 'variable',
+  axes: ['opsz'],
+})
 const geistMono = Geist_Mono({ 
   subsets: ["latin"],
   variable: '--font-geist-mono'
 });
 
 export const metadata: Metadata = {
-  title: 'Rootsy — El mundo dentro de tu negocio',
+  title: 'Rootsy — Recuperá el control de tu negocio',
   description:
-    'Sistema de gestión que se adapta a cualquier negocio. Simple en la superficie, profundo cuando lo necesitás.',
+    'Gestioná ventas, stock, compras y gastos desde un solo lugar. Rootsy se adapta a comercio, elaboración y gastronomía.',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -46,7 +47,7 @@ export default function RootLayout({
   return (
     <html lang="es" className="scroll-smooth" suppressHydrationWarning>
       <body
-        className={`${nunito.variable} ${geistMono.variable} font-sans antialiased`}
+        className={`${nunitoSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <AppAppearanceShell>{children}</AppAppearanceShell>
         <Analytics />

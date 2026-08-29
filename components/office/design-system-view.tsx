@@ -171,7 +171,7 @@ export function DesignSystemView() {
             id="foundation-type"
             eyebrow="Fundamentos"
             title="Tipografía"
-            description="Familias cargadas con Next (Nunito para toda la UI, Geist Mono para monoespaciado) y escala de tamaños con utilidades Tailwind alineadas a la tabla font-size de la documentación de Tailwind v4."
+            description="Familias cargadas con Next (Nunito Sans para toda la UI, Geist Mono para monoespaciado) y escala de tamaños con utilidades Tailwind alineadas a la tabla font-size de la documentación de Tailwind v4."
           >
             <DsFoundationTypefaces />
             <div className="mt-8 space-y-3">

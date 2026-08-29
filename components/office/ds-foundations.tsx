@@ -123,16 +123,16 @@ export function DsFoundationTypefaces() {
           Sans · interfaz (font-sans)
         </p>
         <p className="font-sans text-2xl font-semibold tracking-tight">
-          Nunito — Ábaco verde 123
+          Nunito Sans — Ábaco verde 123
         </p>
         <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
-          <span className="font-mono text-[11px] text-foreground">Nunito</span> se carga con{" "}
+          <span className="font-mono text-[11px] text-foreground">Nunito Sans</span> se carga con{" "}
           <span className="font-mono text-[11px]">next/font/google</span> en{" "}
           <span className="font-mono text-[11px]">app/layout.tsx</span>
-          (subset latin, pesos 400, 500, 600, 700, 800). El{" "}
+          (subset latin, variable 400–900 con eje óptico opsz, como en Figma Make). El{" "}
           <span className="font-mono text-[11px]">&lt;body&gt;</span> aplica{" "}
           <span className="font-mono text-[11px]">font-sans</span> y las variables{" "}
-          <span className="font-mono text-[11px]">--font-nunito</span> y{" "}
+          <span className="font-mono text-[11px]">--font-nunito-sans</span> y{" "}
           <span className="font-mono text-[11px]">--font-geist-mono</span>. En el tema (
           <span className="font-mono text-[11px]">app/globals.css</span>,{" "}
           <span className="font-mono text-[11px]">@theme inline</span>){" "}
