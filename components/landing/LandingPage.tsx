@@ -85,14 +85,19 @@ function RootsyLogo({ className }: { className?: string }) {
   )
 }
 
-/** Capturas de producto — nombres alineados al Make (Home_-_Hero, Comercio_-_*). */
+/** Capturas de producto — nombres alineados al Make (Home_-_Hero, Comercio_-_*, Gastronomia_-_*). */
 const productCapture = "/landing/home-hero.png"
 const comercioHero = "/landing/comercio-hero.png"
 const comercioBenef1 = "/landing/comercio-beneficio-1.png"
 const comercioBenef2 = "/landing/comercio-beneficio-2.png"
 const comercioBenef3 = "/landing/comercio-beneficio-3.png"
+const gastronomiaHero = "/landing/gastronomia-hero.png"
+const gastronomiaSol1 = "/landing/gastronomia-solucion-1.png"
+const gastronomiaSol2 = "/landing/gastronomia-solucion-2.png"
+const gastronomiaSol3 = "/landing/gastronomia-solucion-3.png"
+const gastronomiaSol4 = "/landing/gastronomia-solucion-4.png"
 
-type SegmentId = "comercio" | "elaboracion" | "gastronomia";
+type SegmentId = "comercio" | "gastronomia" | "elaboracion";
 
 interface Plan {
   name: string;
@@ -552,6 +557,7 @@ const segments: Record<SegmentId, SegmentData> = {
     valueProp: "Todo tu restaurante, sincronizado de punta a punta.",
     intro: "Pensado para restaurantes, bares y cafeterías que necesitan atender más rápido, vender más y mantener toda la operación bajo control.",
     useCases: ["Restaurante", "Bar", "Cafetería", "Pizzería", "Rotisería"],
+    heroImageSrc: gastronomiaHero,
     benefits: [
       {
         title: "Un salón que trabaja a tu manera.",
@@ -563,6 +569,7 @@ const segments: Record<SegmentId, SegmentData> = {
           "Pedidos desde tablets o celulares",
         ],
         shot: "Mapa de salón y mesas",
+        imageSrc: gastronomiaSol1,
       },
       {
         title: "Cada pedido llega donde tiene que llegar.",
@@ -574,6 +581,7 @@ const segments: Record<SegmentId, SegmentData> = {
           "Cocina y salón siempre sincronizados",
         ],
         shot: "Comandas digitales en vivo",
+        imageSrc: gastronomiaSol2,
       },
       {
         title: "Vendé más. Controlá menos.",
@@ -585,6 +593,7 @@ const segments: Record<SegmentId, SegmentData> = {
           "Costos y rentabilidad por producto",
         ],
         shot: "Stock e ingredientes",
+        imageSrc: gastronomiaSol3,
       },
       {
         title: "Vendé donde quieran comprarte.",
@@ -596,6 +605,7 @@ const segments: Record<SegmentId, SegmentData> = {
           "Integración con PedidosYa y Rappi",
         ],
         shot: "Canales de venta",
+        imageSrc: gastronomiaSol4,
       },
     ],
     featureGroupsTitle: "Todo lo que tu restaurante necesita. En un solo lugar.",
@@ -927,7 +937,7 @@ function ProblemCard({
   );
 }
 
-const SEGMENT_IDS: SegmentId[] = ["comercio", "elaboracion", "gastronomia"];
+const SEGMENT_IDS: SegmentId[] = ["comercio", "gastronomia", "elaboracion"];
 
 /* Unified content shell for the 1440px frame — ~1280px container with generous gutters */
 const SHELL = "w-full max-w-[1280px] mx-auto px-8 lg:px-14";
